@@ -11,11 +11,67 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - Congress.gov and OpenStates API integrations
-- Database schema implementation with Prisma
 - Authentication and authorization (JWT/OAuth)
 - ML pipeline with BART, BERT, XGBoost (Phase 2)
 - Neo4j influence network visualization (Phase 3)
 - Kubernetes multi-region deployment (Phase 3)
+
+---
+
+## [0.3.0] - 2026-01-28
+
+### Added
+- **Prisma Schema (apps/api/prisma)**:
+  - Complete data model for legislative tracking (24 models)
+  - Congress, Bill, Legislator, RollCallVote, Committee models
+  - Amendment, BillAction, BillTextVersion, CommitteeReferral models
+  - LegislatorPartyHistory, PolicyArea, Subject models
+  - Optimized indexes for query patterns
+  - Composite unique constraints for data integrity
+  - Support for bill types, statuses, party affiliations, chambers
+- **Database Layer (apps/api/src/db)**:
+  - Prisma client singleton with connection pooling
+  - Automatic retry logic with exponential backoff (5 retries)
+  - Health check and graceful shutdown utilities
+  - In-memory cache fallback when Redis unavailable
+  - Key namespacing for cost-efficient single Redis instance
+  - Configurable TTLs: cache (5min), search (1min), session (24h)
+- **Repository Layer (apps/api/src/repositories)**:
+  - BaseRepository with cache-aside pattern
+  - Pagination utilities (offset and cursor-based)
+  - Generic sorting with type-safe field validation
+  - BillRepository: full-text search, filtering, sponsor queries
+  - LegislatorRepository: search, voting stats, sponsorship stats
+  - VoteRepository: roll call votes, party breakdown, comparison
+  - CommitteeRepository: hierarchy, memberships, bill referrals
+- **Full-Text Search**:
+  - PostgreSQL tsvector/tsquery for bills and legislators
+  - SQL trigger functions for automatic search vector updates
+  - Weighted search (title:A, summary:B, text:C)
+  - Ranked results with ts_rank scoring
+- **Database Migrations (apps/api/prisma/migrations)**:
+  - Initial schema migration with all models
+  - Full-text search triggers migration
+  - Comprehensive README with migration guidelines
+- **Seed Data (apps/api/prisma/seed.ts)**:
+  - Development seed script with realistic data
+  - 118th Congress with sample bills
+  - Sample legislators from both parties
+  - Committee structure with memberships
+  - Roll call votes with individual positions
+- **Design Documentation**:
+  - Database layer design document with architecture diagrams
+  - Cost optimization strategy ($0-40/month target)
+  - Performance considerations and caching strategy
+
+### Changed
+- Updated apps/api/package.json with Prisma dependencies
+- Removed "Database schema implementation with Prisma" from Planned (completed)
+
+### Infrastructure
+- PostgreSQL 16 full-text search integration
+- In-memory cache for zero-cost development without Redis
+- Connection pool management for production readiness
 
 ---
 
@@ -90,7 +146,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 |---------|------|-------------|
 | 0.1.0 | 2026-01-28 | Initial planning and documentation |
 | 0.2.0 | 2026-01-28 | Phase 1 MVP scaffold complete |
-| 0.3.0 | TBD | Phase 1 data layer complete |
+| 0.3.0 | 2026-01-28 | Phase 1 data layer complete |
 | 0.4.0 | TBD | Phase 1 API complete |
 | 0.5.0 | TBD | Phase 1 frontend MVP complete |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
