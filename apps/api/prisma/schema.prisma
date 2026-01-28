@@ -1,0 +1,648 @@
+// LTIP Database Schema
+// Version: 1.0.0
+// PostgreSQL with full-text search via tsvector
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Party {
+  D // Democrat
+  R // Republican
+  I // Independent
+  L // Libertarian
+  G // Green
+  O // Other
+}
+
+enum Chamber {
+  SENATE
+  HOUSE
+}
+
+enum BillType {
+  HR      // House Bill
+  S       // Senate Bill
+  HRES    // House Resolution
+  SRES    // Senate Resolution
+  HJRES   // House Joint Resolution
+  SJRES   // Senate Joint Resolution
+  HCONRES // House Concurrent Resolution
+  SCONRES // Senate Concurrent Resolution
+}
+
+enum BillStatus {
+  INTRODUCED
+  IN_COMMITTEE
+  REPORTED_BY_COMMITTEE
+  PASSED_HOUSE
+  PASSED_SENATE
+  RESOLVING_DIFFERENCES
+  TO_PRESIDENT
+  SIGNED_INTO_LAW
+  VETOED
+  VETO_OVERRIDDEN
+  POCKET_VETOED
+  FAILED
+  WITHDRAWN
+  ENACTED
+}
+
+enum VoteType {
+  ROLL_CALL
+  VOICE
+  UNANIMOUS_CONSENT
+  DIVISION
+}
+
+enum VoteCategory {
+  PASSAGE
+  AMENDMENT
+  PROCEDURAL
+  CLOTURE
+  NOMINATION
+  TREATY
+  VETO_OVERRIDE
+  MOTION_TO_RECOMMIT
+  MOTION_TO_TABLE
+  IMPEACHMENT
+}
+
+enum VotePosition {
+  YEA
+  NAY
+  NOT_VOTING
+  PRESENT
+}
+
+enum VoteResult {
+  PASSED
+  FAILED
+  AGREED_TO
+  REJECTED
+}
+
+enum DataSource {
+  CONGRESS_GOV
+  OPENSTATES
+  LEGISCAN
+  GPO
+  MANUAL
+}
+
+enum DataQuality {
+  VERIFIED
+  UNVERIFIED
+  PARTIAL
+  STALE
+}
+
+enum TextFormat {
+  XML
+  HTML
+  TXT
+  PDF
+}
+
+enum EndReason {
+  TERM_ENDED
+  RESIGNED
+  DIED
+  EXPELLED
+  REMOVED
+  APPOINTED_ELSEWHERE
+}
+
+enum SubscriptionType {
+  BILL
+  LEGISLATOR
+  SUBJECT
+  COMMITTEE
+  KEYWORD
+}
+
+enum CommitteeType {
+  STANDING
+  SELECT
+  JOINT
+  SUBCOMMITTEE
+  SPECIAL
+}
+
+// ============================================================================
+// CORE MODELS
+// ============================================================================
+
+/// Congressional session (e.g., 118th Congress)
+model Congress {
+  number        Int       @id
+  startDate     DateTime
+  endDate       DateTime?
+  houseMajority Party?
+  senateMajority Party?
+
+  bills Bill[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("congresses")
+}
+
+/// Member of Congress (Representative or Senator)
+model Legislator {
+  id         String  @id // Bioguide ID (e.g., "A000360")
+  firstName  String
+  lastName   String
+  middleName String?
+  fullName   String
+  nickName   String?
+  suffix     String?
+
+  // Cross-reference for same person across terms
+  personId String? // Links same person across different terms
+
+  // Current status
+  party   Party
+  chamber Chamber
+  state   String  @db.Char(2)
+  district Int?   // Null for senators
+
+  // Special cases
+  isVotingMember Boolean @default(true) // False for DC, territories
+  leadershipRole String? // Speaker, Majority Leader, etc.
+
+  // Term info
+  termStart DateTime?
+  termEnd   DateTime?
+  inOffice  Boolean    @default(true)
+  endReason EndReason?
+
+  // Contact
+  website String?
+  phone   String?
+  address String?
+
+  // Social
+  twitterHandle String?
+  facebookId    String?
+  youtubeId     String?
+
+  // Data provenance
+  dataSource   DataSource
+  lastSyncedAt DateTime?
+
+  // Full-text search vector (managed by trigger)
+  searchVector Unsupported("tsvector")?
+
+  // Relations
+  sponsoredBills     BillSponsor[]
+  votes              Vote[]
+  partyHistory       PartyChange[]
+  committees         CommitteeMembership[]
+  sponsoredAmendments Amendment[]
+  pairedVotes        Vote[]                @relation("VotePair")
+  subscriptions      Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([party])
+  @@index([chamber])
+  @@index([state])
+  @@index([inOffice])
+  @@index([personId])
+  @@map("legislators")
+}
+
+/// Legislative bill or resolution
+model Bill {
+  id             String   @id // Format: "hr-1234-118"
+  congressNumber Int
+  billType       BillType
+  billNumber     Int
+
+  // Titles
+  title      String  // Official title
+  shortTitle String? // Popular/short title
+
+  // Content
+  summary String? @db.Text
+
+  // Status tracking
+  status         BillStatus
+  introducedDate DateTime
+  lastActionDate DateTime?
+
+  // Cross-congress tracking (reintroduced bills)
+  previousVersionId String?
+
+  // Policy categorization
+  policyAreaId String?
+
+  // Denormalized counts for performance (maintained by triggers)
+  sponsorCount   Int @default(0)
+  cosponsorsD    Int @default(0)
+  cosponsorsR    Int @default(0)
+  cosponsorsI    Int @default(0)
+  voteCountYea   Int @default(0)
+  voteCountNay   Int @default(0)
+  amendmentCount Int @default(0)
+
+  // Data provenance
+  dataSource   DataSource
+  dataQuality  DataQuality @default(UNVERIFIED)
+  lastSyncedAt DateTime?
+
+  // Full-text search vector (managed by trigger)
+  searchVector Unsupported("tsvector")?
+
+  // Relations
+  congress        Congress            @relation(fields: [congressNumber], references: [number])
+  policyArea      PolicyArea?         @relation(fields: [policyAreaId], references: [id])
+  previousVersion Bill?               @relation("BillVersions", fields: [previousVersionId], references: [id])
+  laterVersions   Bill[]              @relation("BillVersions")
+  sponsors        BillSponsor[]
+  textVersions    BillTextVersion[]
+  actions         BillAction[]
+  amendments      Amendment[]
+  rollCallVotes   RollCallVote[]
+  referrals       CommitteeReferral[]
+  subjects        BillSubject[]
+  cboScores       CboScore[]
+  subscriptions   Subscription[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([congressNumber, billType, billNumber])
+  @@index([status])
+  @@index([introducedDate])
+  @@index([lastActionDate])
+  @@index([policyAreaId])
+  @@map("bills")
+}
+
+// ============================================================================
+// VOTE MODELS
+// ============================================================================
+
+/// Roll call vote record
+model RollCallVote {
+  id             String @id // Format: "h2024-123" or "s2024-456"
+  billId         String? // Nullable - some votes aren't on bills
+  chamber        Chamber
+  congressNumber Int
+  session        Int
+  rollNumber     Int
+
+  voteType     VoteType
+  voteCategory VoteCategory
+  question     String       // What was being voted on
+  result       VoteResult
+
+  // Vote counts
+  yeas      Int
+  nays      Int
+  present   Int @default(0)
+  notVoting Int @default(0)
+
+  // Edge case: VP tie-breaker
+  tieBreakerVp String?
+
+  voteDate DateTime
+
+  // Data provenance
+  dataSource DataSource
+
+  // Relations
+  bill            Bill?  @relation(fields: [billId], references: [id])
+  individualVotes Vote[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([chamber, congressNumber, session, rollNumber])
+  @@index([billId])
+  @@index([voteDate])
+  @@index([voteCategory])
+  @@map("roll_call_votes")
+}
+
+/// Individual legislator vote on a roll call
+model Vote {
+  id           String       @id @default(cuid())
+  rollCallId   String
+  legislatorId String
+  position     VotePosition
+
+  // Edge cases
+  isProxy      Boolean @default(false) // COVID-era proxy voting
+  pairedWithId String? // Traditional vote pairing
+
+  // Relations
+  rollCall   RollCallVote @relation(fields: [rollCallId], references: [id], onDelete: Cascade)
+  legislator Legislator   @relation(fields: [legislatorId], references: [id])
+  pairedWith Legislator?  @relation("VotePair", fields: [pairedWithId], references: [id])
+
+  @@unique([rollCallId, legislatorId])
+  @@index([legislatorId])
+  @@index([position])
+  @@map("votes")
+}
+
+// ============================================================================
+// SUPPORTING MODELS
+// ============================================================================
+
+/// Bill sponsor/cosponsor relationship
+model BillSponsor {
+  id            String    @id @default(cuid())
+  billId        String
+  legislatorId  String
+  isPrimary     Boolean   @default(false)
+  cosponsorDate DateTime?
+  withdrawnDate DateTime? // Cosponsors can withdraw
+
+  bill       Bill       @relation(fields: [billId], references: [id], onDelete: Cascade)
+  legislator Legislator @relation(fields: [legislatorId], references: [id])
+
+  @@unique([billId, legislatorId])
+  @@index([legislatorId])
+  @@map("bill_sponsors")
+}
+
+/// Version of bill text (ih, rh, eh, enr, etc.)
+model BillTextVersion {
+  id          String @id @default(cuid())
+  billId      String
+  versionCode String // "ih", "rh", "eh", "rs", "es", "enr", etc.
+  versionName String // "Introduced in House", "Enrolled Bill", etc.
+
+  // Storage
+  textUrl    String     // S3/R2 URL
+  textHash   String     // SHA-256 for deduplication
+  textFormat TextFormat
+  pageCount  Int?
+  wordCount  Int?
+
+  publishedDate DateTime
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@unique([billId, versionCode])
+  @@index([textHash])
+  @@map("bill_text_versions")
+}
+
+/// Legislative action on a bill
+model BillAction {
+  id         String    @id @default(cuid())
+  billId     String
+  actionDate DateTime
+  actionCode String?   // Congress.gov action code
+  actionText String
+  chamber    Chamber?
+
+  // Committee action
+  committeeId String?
+
+  bill      Bill       @relation(fields: [billId], references: [id], onDelete: Cascade)
+  committee Committee? @relation(fields: [committeeId], references: [id])
+
+  @@index([billId, actionDate])
+  @@map("bill_actions")
+}
+
+/// Amendment to a bill
+model Amendment {
+  id              String  @id // Format: "hamdt-123-118" or "samdt-456-118"
+  billId          String
+  chamber         Chamber
+  congressNumber  Int
+  amendmentNumber Int
+
+  purpose     String?
+  description String? @db.Text
+  status      String
+
+  // 2nd degree amendments
+  parentAmendmentId String?
+
+  sponsorId String?
+
+  // Vote result if voted on
+  rollCallVoteId String?
+
+  offeredDate DateTime?
+
+  bill            Bill        @relation(fields: [billId], references: [id], onDelete: Cascade)
+  parentAmendment Amendment?  @relation("AmendmentTree", fields: [parentAmendmentId], references: [id])
+  childAmendments Amendment[] @relation("AmendmentTree")
+  sponsor         Legislator? @relation(fields: [sponsorId], references: [id])
+
+  @@unique([chamber, congressNumber, amendmentNumber])
+  @@index([billId])
+  @@map("amendments")
+}
+
+/// Legislator party change record
+model PartyChange {
+  id           String   @id @default(cuid())
+  legislatorId String
+  fromParty    Party
+  toParty      Party
+  changeDate   DateTime
+  reason       String?
+
+  legislator Legislator @relation(fields: [legislatorId], references: [id], onDelete: Cascade)
+
+  @@index([legislatorId])
+  @@index([changeDate])
+  @@map("party_changes")
+}
+
+/// Congressional committee
+model Committee {
+  id      String        @id // Thomas ID (e.g., "HSAG")
+  name    String
+  chamber Chamber
+  type    CommitteeType
+
+  // Subcommittee hierarchy
+  parentId String?
+
+  jurisdiction String? @db.Text
+
+  parent        Committee?            @relation("CommitteeHierarchy", fields: [parentId], references: [id])
+  subcommittees Committee[]           @relation("CommitteeHierarchy")
+  members       CommitteeMembership[]
+  referrals     CommitteeReferral[]
+  actions       BillAction[]
+  subscriptions Subscription[]
+
+  @@index([chamber])
+  @@index([parentId])
+  @@map("committees")
+}
+
+/// Committee membership
+model CommitteeMembership {
+  id           String    @id @default(cuid())
+  committeeId  String
+  legislatorId String
+  role         String?   // Chair, Ranking Member, Member
+  startDate    DateTime
+  endDate      DateTime?
+
+  committee  Committee  @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  legislator Legislator @relation(fields: [legislatorId], references: [id])
+
+  @@unique([committeeId, legislatorId, startDate])
+  @@map("committee_memberships")
+}
+
+/// Bill referral to committee
+model CommitteeReferral {
+  id           String   @id @default(cuid())
+  billId       String
+  committeeId  String
+  referralDate DateTime
+  isPrimary    Boolean  @default(false)
+
+  bill      Bill      @relation(fields: [billId], references: [id], onDelete: Cascade)
+  committee Committee @relation(fields: [committeeId], references: [id])
+
+  @@unique([billId, committeeId])
+  @@map("committee_referrals")
+}
+
+/// Policy area (top-level categorization)
+model PolicyArea {
+  id   String @id @default(cuid())
+  name String @unique
+
+  bills Bill[]
+
+  @@map("policy_areas")
+}
+
+/// Subject term (hierarchical taxonomy)
+model Subject {
+  id   String @id @default(cuid())
+  name String @unique
+
+  // Hierarchical taxonomy
+  parentId String?
+
+  parent        Subject?       @relation("SubjectHierarchy", fields: [parentId], references: [id])
+  children      Subject[]      @relation("SubjectHierarchy")
+  bills         BillSubject[]
+  subscriptions Subscription[]
+
+  @@index([parentId])
+  @@map("subjects")
+}
+
+/// Bill-Subject many-to-many relationship
+model BillSubject {
+  id        String  @id @default(cuid())
+  billId    String
+  subjectId String
+  isPrimary Boolean @default(false)
+
+  bill    Bill    @relation(fields: [billId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id])
+
+  @@unique([billId, subjectId])
+  @@map("bill_subjects")
+}
+
+/// Congressional Budget Office score
+model CboScore {
+  id            String   @id @default(cuid())
+  billId        String
+  scoreDate     DateTime
+  costEstimate  Decimal? @db.Decimal(15, 2) // In millions
+  deficitImpact Decimal? @db.Decimal(15, 2)
+  timeframe     String?  // "10 years", "5 years"
+  reportUrl     String?
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+
+  @@index([billId])
+  @@map("cbo_scores")
+}
+
+// ============================================================================
+// USER MODELS
+// ============================================================================
+
+/// Application user
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String? // Null for OAuth-only users
+
+  // Rate limiting
+  rateLimit Int @default(100) // Requests per minute
+
+  subscriptions Subscription[]
+  apiKeys       ApiKey[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+/// API key for programmatic access
+model ApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  keyHash    String    @unique // SHA-256 of actual key
+  name       String    // User-friendly name
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([keyHash])
+  @@map("api_keys")
+}
+
+/// User subscription for notifications
+model Subscription {
+  id     String           @id @default(cuid())
+  userId String
+  type   SubscriptionType
+
+  // Polymorphic foreign keys (only one set)
+  billId       String?
+  legislatorId String?
+  subjectId    String?
+  committeeId  String?
+  keyword      String?
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bill       Bill?       @relation(fields: [billId], references: [id])
+  legislator Legislator? @relation(fields: [legislatorId], references: [id])
+  subject    Subject?    @relation(fields: [subjectId], references: [id])
+  committee  Committee?  @relation(fields: [committeeId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, type, billId, legislatorId, subjectId, committeeId, keyword])
+  @@map("subscriptions")
+}
