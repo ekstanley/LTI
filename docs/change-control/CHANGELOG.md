@@ -11,10 +11,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - Congress.gov and OpenStates API integrations
+- Frontend bill listing and detail pages
 - Authentication and authorization (JWT/OAuth)
 - ML pipeline with BART, BERT, XGBoost (Phase 2)
 - Neo4j influence network visualization (Phase 3)
 - Kubernetes multi-region deployment (Phase 3)
+
+---
+
+## [0.5.0] - 2026-01-28
+
+### Added
+- **WebSocket Server (apps/api/src/websocket)**:
+  - Room-based pub/sub subscription manager (`room-manager.ts`)
+  - Bidirectional client↔room tracking for efficient cleanup
+  - Topic validation: `bill:{id}` and `vote:{id}` formats
+  - Connection lifecycle management with client IDs
+- **Vote Broadcast Service (apps/api/src/websocket/broadcast.service.ts)**:
+  - `emitVoteUpdate()`: Individual legislator vote broadcasts
+  - `emitTallyUpdate()`: Running tally count broadcasts
+  - `emitBillStatusChange()`: Bill status transition broadcasts
+  - `emitVoteWithTally()`: Combined vote + tally convenience method
+  - Dual-room broadcasting (vote room + bill room)
+- **WebSocket Authentication (apps/api/src/websocket/auth.ts)**:
+  - JWT token extraction from query string (`?token=xxx`)
+  - JWT token extraction from Sec-WebSocket-Protocol header
+  - Token format validation (3-part base64url structure)
+  - User ID extraction from `sub` or `userId` claims
+  - MVP: Format validation only (signature verification in Phase 2)
+- **Heartbeat and Connection Management**:
+  - 30-second ping/pong heartbeat interval
+  - Automatic stale connection cleanup
+  - Graceful shutdown with client notification
+- **Health Endpoints**:
+  - GET `/health/ws`: WebSocket statistics (connected count, rooms, subscriptions)
+  - Version bump to 0.5.0 in health response
+- **WebSocket Type System (apps/api/src/websocket/types.ts)**:
+  - Client messages: subscribe, unsubscribe, ping
+  - Server messages: connection:established, subscribed, unsubscribed, pong, error
+  - ExtendedWebSocket interface with clientId, userId, isAlive metadata
+  - Error code constants: INVALID_MESSAGE, INVALID_TOPIC, UNAUTHORIZED, RATE_LIMITED
+- **Unit Tests (apps/api/src/__tests__/websocket)**:
+  - Room manager tests: 21 tests covering subscribe/unsubscribe/cleanup
+  - Auth tests: 17 tests for token extraction and validation
+  - Broadcast service tests: 10 tests for event structure and routing
+  - Total: 48 new WebSocket-specific tests
+
+### Changed
+- Updated WebSocket server to use room manager for subscriptions
+- Integrated authentication check on WebSocket upgrade
+- Updated Unreleased section to reflect completed WebSocket work
+
+### Technical Details
+- exactOptionalPropertyTypes compliance with conditional spread pattern
+- vi.mock hoisting pattern for Vitest module mocking
+- Zero external dependencies for WebSocket (native `ws` library)
+- Estimated bundle impact: ~50KB (vs ~300KB for Socket.io alternative)
 
 ---
 
@@ -197,7 +249,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.2.0 | 2026-01-28 | Phase 1 MVP scaffold complete |
 | 0.3.0 | 2026-01-28 | Phase 1 data layer complete |
 | 0.4.0 | 2026-01-28 | Phase 1 API layer complete |
-| 0.5.0 | TBD | Phase 1 frontend MVP complete |
+| 0.5.0 | 2026-01-28 | Phase 1 WebSocket layer complete |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |
 | 1.2.0 | TBD | Phase 2 analysis models complete |
