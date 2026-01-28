@@ -18,6 +18,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.4.0] - 2026-01-28
+
+### Added
+- **DTO Mappers (apps/api/src/mappers)**:
+  - Type-safe Prisma-to-API transformations
+  - `bill.mapper.ts`: Bill summary and detail transformations
+  - `legislator.mapper.ts`: Legislator and committee membership mapping
+  - `vote.mapper.ts`: Roll call votes, positions, party breakdown
+  - `enums.ts`: Bidirectional enum conversions (BillType, Chamber, Party, Status)
+  - Comprehensive type assertions for API response formats
+  - Field transformations: UPPERCASE to lowercase, dates to ISO strings
+- **Service Layer (apps/api/src/services)**:
+  - Business logic abstraction over repositories
+  - `bill.service.ts`: Bill listing, search, filtering, cosponsors
+  - `legislator.service.ts`: Legislator list, stats, votes, committees
+  - `vote.service.ts`: Roll call votes, individual votes, party breakdown
+  - `committee.service.ts`: Committee hierarchy, memberships
+  - API filter-to-repository parameter conversion
+  - Offset-to-page pagination conversion
+- **API Route Wiring**:
+  - Bills routes connected to bill service with real Prisma data
+  - Legislators routes with search, stats, votes, committees
+  - Votes routes with roll calls and party breakdown
+  - Committees routes with hierarchy and members
+  - Health routes with proper TypeScript inference
+- **Committees Route (apps/api/src/routes/committees.ts)**:
+  - GET `/committees` - List committees with chamber filter
+  - GET `/committees/:id` - Committee details with members
+  - GET `/committees/:id/bills` - Bills referred to committee
+  - Zod validation for all request parameters
+- **Unit Tests (apps/api/src/__tests__)**:
+  - Mapper unit tests: 57 tests covering all enum and object transformations
+  - Service unit tests: 25 tests for bill and legislator services
+  - Vitest with mock repository pattern
+  - Test coverage for search, filtering, pagination, edge cases
+
+### Changed
+- Updated apps/api/src/routes to use service layer instead of stubs
+- Removed placeholder data from route handlers
+- Updated route type annotations for TypeScript portability
+
+### Technical Details
+- Total tests: 123 passing
+- Separation of concerns: routes → services → repositories → Prisma
+- Consistent error handling with ApiError class
+- exactOptionalPropertyTypes compliance with conditional spreads
+
+---
+
 ## [0.3.0] - 2026-01-28
 
 ### Added
@@ -147,7 +196,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.1.0 | 2026-01-28 | Initial planning and documentation |
 | 0.2.0 | 2026-01-28 | Phase 1 MVP scaffold complete |
 | 0.3.0 | 2026-01-28 | Phase 1 data layer complete |
-| 0.4.0 | TBD | Phase 1 API complete |
+| 0.4.0 | 2026-01-28 | Phase 1 API layer complete |
 | 0.5.0 | TBD | Phase 1 frontend MVP complete |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |

@@ -3,14 +3,14 @@ import { config } from '../config.js';
 
 export const logger = pino({
   level: config.logLevel,
-  transport: config.isDev
-    ? {
-        target: 'pino-pretty',
-        options: {
-          colorize: true,
-          ignore: 'pid,hostname',
-          translateTime: 'SYS:standard',
-        },
-      }
-    : undefined,
+  ...(config.isDev && {
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        colorize: true,
+        ignore: 'pid,hostname',
+        translateTime: 'SYS:standard',
+      },
+    },
+  }),
 });

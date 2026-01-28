@@ -14,6 +14,7 @@ import { legislatorsRouter } from './routes/legislators.js';
 import { votesRouter } from './routes/votes.js';
 import { analysisRouter } from './routes/analysis.js';
 import { conflictsRouter } from './routes/conflicts.js';
+import { committeesRouter } from './routes/committees.js';
 import { setupWebSocket } from './websocket/index.js';
 
 const app = express();
@@ -54,6 +55,7 @@ app.use('/api/v1/legislators', legislatorsRouter);
 app.use('/api/v1/votes', votesRouter);
 app.use('/api/v1/analysis', analysisRouter);
 app.use('/api/v1/conflicts', conflictsRouter);
+app.use('/api/v1/committees', committeesRouter);
 
 // Error handling
 app.use(notFoundHandler);

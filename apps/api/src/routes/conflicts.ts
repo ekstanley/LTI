@@ -1,9 +1,9 @@
-import { Router } from 'express';
+import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import type { ConflictOfInterest } from '@ltip/shared';
 
-export const conflictsRouter = Router();
+export const conflictsRouter: RouterType = Router();
 
 const listConflictsSchema = z.object({
   legislatorId: z.string().optional(),
@@ -17,9 +17,9 @@ const listConflictsSchema = z.object({
 // Get conflicts with filtering
 conflictsRouter.get('/', validate(listConflictsSchema, 'query'), async (req, res, next) => {
   try {
-    const { limit, offset } = req.query as z.infer<typeof listConflictsSchema>;
+    const { limit, offset } = listConflictsSchema.parse(req.query);
 
-    // TODO: Replace with actual database query
+    // TODO: Replace with actual database query when conflict detection service is implemented
     const conflicts: ConflictOfInterest[] = [];
     const total = 0;
 
@@ -42,11 +42,9 @@ const getConflictSchema = z.object({
   id: z.string().min(1),
 });
 
-conflictsRouter.get('/:id', validate(getConflictSchema, 'params'), async (req, res, next) => {
+conflictsRouter.get('/:id', validate(getConflictSchema, 'params'), async (_req, res, next) => {
   try {
-    const { id } = req.params;
-
-    // TODO: Replace with actual database query
+    // TODO: Replace with actual database query when conflict detection service is implemented
     const conflict: ConflictOfInterest | null = null;
 
     if (!conflict) {

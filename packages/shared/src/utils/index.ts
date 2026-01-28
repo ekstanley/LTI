@@ -30,7 +30,7 @@ export function parseBillSlug(slug: string): {
   congressNumber: number;
 } | null {
   const match = slug.match(/^([a-z]+)-(\d+)-(\d+)$/i);
-  if (!match) return null;
+  if (!match || !match[1] || !match[2] || !match[3]) return null;
 
   return {
     billType: match[1].toLowerCase(),
@@ -97,9 +97,9 @@ export function formatRelativeTime(isoDate: string): string {
  * @example getOrdinalSuffix(118) => 'th'
  */
 export function getOrdinalSuffix(n: number): string {
-  const s = ['th', 'st', 'nd', 'rd'];
+  const s = ['th', 'st', 'nd', 'rd'] as const;
   const v = n % 100;
-  return s[(v - 20) % 10] || s[v] || s[0];
+  return s[(v - 20) % 10] ?? s[v] ?? 'th';
 }
 
 /**
