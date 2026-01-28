@@ -5,6 +5,44 @@
 
 ---
 
+## Master Rules
+
+> **MANDATORY**: These rules apply to all AI agents and contributors working on this project.
+
+### Documentation Standards
+
+1. **All documentation** in `docs/` shall be authored in **Enhanced Markdown** with:
+   - GitHub Flavored Markdown (GFM) syntax
+   - LaTeX math notation where applicable (`$E=mc^2$`, `$$\sum_{i=1}^n x_i$$`)
+   - Mermaid diagrams for visualizations
+   - Proper tables, code blocks with syntax highlighting
+
+2. **PDF Generation**: A CI pipeline auto-generates PDF versions to `docs/pdf/` on commit
+   - Local generation: `pnpm docs:pdf`
+   - Word export: `pnpm docs:word`
+
+3. **Exceptions**: This file (`AGENTS.md`) and `CLAUDE.md` are excluded from PDF generation
+
+4. **File Naming**: `YYYY-MM-DD-<descriptive-name>.md` for plans and change control documents
+
+### Monorepo Structure
+
+```
+apps/
+  web/          # Next.js 14 frontend
+  api/          # Express.js backend
+packages/
+  shared/       # Shared types, utilities
+  eslint-config/# Shared ESLint configuration
+  tsconfig/     # Shared TypeScript configuration
+docs/
+  plans/        # Implementation plans (.md)
+  pdf/          # Auto-generated PDFs
+  change-control/
+```
+
+---
+
 ## Project Overview
 
 A comprehensive legislative intelligence platform providing neutral analysis of federal and state legislation with real-time voting data, ML-based predictions, financial conflict detection, and historical legal context.
@@ -132,38 +170,43 @@ socket.on('bill:status_change', data)
 
 ---
 
-## Development Commands (Expected)
-
-Once scaffolded, the project will use these patterns:
+## Development Commands
 
 ```bash
-# Development
-npm run dev              # Start all services
-npm run dev:frontend     # Next.js dev server (port 3000)
-npm run dev:backend      # Express server (port 4000)
+# Development (Turborepo)
+pnpm dev                 # Start all services (frontend + backend)
+pnpm dev --filter=web    # Next.js dev server only (port 3000)
+pnpm dev --filter=api    # Express server only (port 4000)
 
-# Docker
+# Docker Infrastructure
 docker-compose up -d     # Start infrastructure (Postgres, Redis, ES)
 docker-compose down      # Stop services
 docker-compose logs -f   # View logs
 
 # Database
-npm run db:migrate       # Run migrations
-npm run db:seed          # Seed historical data
-npm run db:reset         # Reset database
+pnpm db:migrate          # Run migrations
+pnpm db:seed             # Seed historical data
+pnpm db:reset            # Reset database
 
 # ML Pipeline
 python -m ml.train       # Train models
 python -m ml.ingest      # Run data ingestion
 
 # Testing
-npm test                 # Run test suite
-npm run test:e2e         # End-to-end tests
+pnpm test                # Run all test suites
+pnpm test --filter=web   # Frontend tests only
+pnpm test --filter=api   # Backend tests only
+pnpm test:e2e            # End-to-end tests
 
-# Build
-npm run build            # Production build
-npm run typecheck        # TypeScript validation
-npm run lint             # Linting
+# Build & Quality
+pnpm build               # Production build (all packages)
+pnpm typecheck           # TypeScript validation
+pnpm lint                # ESLint + Prettier check
+pnpm lint:fix            # Auto-fix linting issues
+
+# Documentation
+pnpm docs:pdf            # Generate PDFs from docs/*.md
+pnpm docs:word           # Generate Word docs from docs/*.md
 ```
 
 ---

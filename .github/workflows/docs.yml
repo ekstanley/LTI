@@ -1,0 +1,47 @@
+# SECURITY REVIEW: This workflow does NOT use any untrusted user inputs
+# (no issue titles, PR bodies, commit messages, etc. in run commands)
+# Git operations use hardcoded bot identity, not user-controlled values
+
+name: Generate Documentation PDFs
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/**/*.md'
+      - '.github/workflows/docs.yml'
+      - 'scripts/generate-docs.sh'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  generate-pdfs:
+    name: Generate PDFs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Pandoc and LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-latex-base texlive-fonts-recommended texlive-latex-extra texlive-xetex
+
+      - name: Create PDF output directory
+        run: mkdir -p docs/pdf
+
+      - name: Generate PDFs from Markdown
+        run: |
+          chmod +x scripts/generate-docs.sh
+          ./scripts/generate-docs.sh pdf
+
+      - name: Commit generated PDFs
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add docs/pdf/*.pdf
+          git diff --cached --quiet || git commit -m "docs: auto-generate PDF documentation"
+          git push

@@ -1,0 +1,108 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 250 250 250;
+    --foreground: 23 23 23;
+    --card: 255 255 255;
+    --card-foreground: 23 23 23;
+    --primary: 37 99 235;
+    --primary-foreground: 255 255 255;
+    --secondary: 243 244 246;
+    --secondary-foreground: 31 41 55;
+    --muted: 243 244 246;
+    --muted-foreground: 107 114 128;
+    --accent: 243 244 246;
+    --accent-foreground: 31 41 55;
+    --destructive: 239 68 68;
+    --destructive-foreground: 255 255 255;
+    --border: 229 231 235;
+    --ring: 37 99 235;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-gray-200;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-lg border border-gray-200 bg-white shadow-sm;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply btn bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500;
+  }
+
+  .btn-secondary {
+    @apply btn bg-gray-100 text-gray-900 hover:bg-gray-200 focus:ring-gray-500;
+  }
+
+  .btn-outline {
+    @apply btn border border-gray-300 bg-transparent hover:bg-gray-100 focus:ring-gray-500;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500;
+  }
+
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+}
+
+/* Political party colors */
+.party-d {
+  @apply bg-blue-100 text-blue-800;
+}
+
+.party-r {
+  @apply bg-red-100 text-red-800;
+}
+
+.party-i {
+  @apply bg-purple-100 text-purple-800;
+}
+
+/* Bill status badges */
+.status-introduced {
+  @apply bg-gray-100 text-gray-800;
+}
+
+.status-committee {
+  @apply bg-yellow-100 text-yellow-800;
+}
+
+.status-passed {
+  @apply bg-green-100 text-green-800;
+}
+
+.status-vetoed {
+  @apply bg-red-100 text-red-800;
+}
+
+/* Bias spectrum visualization */
+.bias-bar {
+  @apply h-2 w-full rounded-full bg-gradient-to-r from-blue-600 via-gray-400 to-red-600;
+}
+
+.bias-indicator {
+  @apply absolute -top-1 h-4 w-1 rounded-full bg-gray-900;
+}
+
+/* Loading skeleton */
+.skeleton {
+  @apply animate-pulse rounded bg-gray-200;
+}

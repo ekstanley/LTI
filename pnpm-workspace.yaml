@@ -1,0 +1,8 @@
+# PNPM Workspace Configuration
+# https://pnpm.io/workspaces
+
+packages:
+  # Application packages
+  - "apps/*"
+  # Shared packages
+  - "packages/*"
