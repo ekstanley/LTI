@@ -27,6 +27,7 @@ describe('BillService', () => {
   });
 
   describe('list', () => {
+    // Mock BillSummary matching the Prisma select type
     const mockBillSummary: BillSummary = {
       id: 'hr-1234-118',
       billType: 'HR',
@@ -36,25 +37,11 @@ describe('BillService', () => {
       shortTitle: 'Test Bill',
       introducedDate: new Date('2023-01-15'),
       status: 'INTRODUCED',
-      sponsor: {
-        id: 'A000001',
-        fullName: 'John Smith',
-        party: 'D',
-        chamber: 'HOUSE',
-        state: 'CA',
-        district: 12,
-      },
-      policyArea: {
-        id: 'pa-1',
-        name: 'Economics',
-      },
-      latestAction: {
-        id: 'act-1',
-        actionDate: new Date('2023-01-20'),
-        text: 'Referred to committee',
-        actionType: null,
-        chamber: 'HOUSE',
-      },
+      lastActionDate: new Date('2023-01-20'),
+      sponsorCount: 5,
+      cosponsorsD: 3,
+      cosponsorsR: 1,
+      cosponsorsI: 0,
     };
 
     it('returns paginated bill summaries with correct format', async () => {
@@ -102,16 +89,17 @@ describe('BillService', () => {
       const bill = result.data[0];
 
       // Verify API format transformations
-      expect(bill.id).toBe('hr-1234-118');
-      expect(bill.billType).toBe('hr'); // lowercase
-      expect(bill.billNumber).toBe(1234);
-      expect(bill.congressNumber).toBe(118);
-      expect(bill.title).toBe('Test Bill Act');
+      expect(bill).toBeDefined();
+      expect(bill!.id).toBe('hr-1234-118');
+      expect(bill!.billType).toBe('hr'); // lowercase
+      expect(bill!.billNumber).toBe(1234);
+      expect(bill!.congressNumber).toBe(118);
+      expect(bill!.title).toBe('Test Bill Act');
     });
 
     it('uses search endpoint when search param provided', async () => {
       const mockSearchResult = {
-        data: [mockBillSummary],
+        data: [{ ...mockBillSummary, rank: 0.95 }],
         pagination: {
           total: 1,
           page: 1,
@@ -272,10 +260,13 @@ describe('BillService', () => {
       const mockActions = [
         {
           id: 'act-1',
+          billId: 'hr-1234-118',
           actionDate: new Date('2023-01-20'),
-          text: 'Introduced in House',
-          actionType: 'INTRODUCTION',
-          chamber: 'HOUSE',
+          actionCode: 'H11000',
+          actionText: 'Introduced in House',
+          chamber: 'HOUSE' as const,
+          committeeId: null,
+          committee: null,
         },
       ];
 
@@ -293,10 +284,15 @@ describe('BillService', () => {
       const mockVersions = [
         {
           id: 'tv-1',
+          billId: 'hr-1234-118',
           versionCode: 'IH',
           versionName: 'Introduced in House',
-          publishedAt: new Date('2023-01-15'),
-          url: 'https://congress.gov/bill/118th/hr/1234/text/ih',
+          textUrl: 'https://congress.gov/bill/118th/hr/1234/text/ih',
+          textHash: 'sha256:abc123',
+          textFormat: 'HTML' as const,
+          pageCount: null,
+          wordCount: null,
+          publishedDate: new Date('2023-01-15'),
         },
       ];
 

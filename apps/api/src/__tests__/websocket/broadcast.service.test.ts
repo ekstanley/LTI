@@ -181,7 +181,7 @@ describe('Broadcast Service', () => {
         billId: 'bill-123',
         previousStatus: 'introduced',
         newStatus: 'in_committee',
-        action: 'referred_to_committee',
+        action: { date: '2024-01-15', text: 'Referred to committee' },
       });
 
       expect(mockBroadcastToRoom).toHaveBeenCalledWith('bill:bill-123', {
@@ -190,7 +190,7 @@ describe('Broadcast Service', () => {
           billId: 'bill-123',
           previousStatus: 'introduced',
           newStatus: 'in_committee',
-          action: 'referred_to_committee',
+          action: { date: '2024-01-15', text: 'Referred to committee' },
           timestamp: '2024-01-15T10:00:00.000Z',
         },
       });
@@ -198,10 +198,10 @@ describe('Broadcast Service', () => {
 
     it('handles all bill status transitions', () => {
       const transitions = [
-        { from: 'introduced', to: 'in_committee', action: 'referred_to_committee' },
-        { from: 'in_committee', to: 'passed_house', action: 'passed_house' },
-        { from: 'passed_house', to: 'passed_senate', action: 'passed_senate' },
-        { from: 'passed_senate', to: 'became_law', action: 'signed_by_president' },
+        { from: 'introduced', to: 'in_committee', action: { date: '2024-01-15', text: 'Referred to committee' } },
+        { from: 'in_committee', to: 'passed_house', action: { date: '2024-01-16', text: 'Passed House' } },
+        { from: 'passed_house', to: 'passed_senate', action: { date: '2024-01-17', text: 'Passed Senate' } },
+        { from: 'passed_senate', to: 'became_law', action: { date: '2024-01-18', text: 'Signed by President' } },
       ] as const;
 
       for (const { from, to, action } of transitions) {

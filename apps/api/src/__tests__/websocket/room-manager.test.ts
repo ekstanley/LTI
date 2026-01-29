@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { WebSocket } from 'ws';
 import { RoomManager } from '../../websocket/room-manager.js';
 
 // Mock logger to avoid noise in tests

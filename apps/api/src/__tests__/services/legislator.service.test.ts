@@ -8,7 +8,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { legislatorService } from '../../services/legislator.service.js';
 import { legislatorRepository } from '../../repositories/legislator.repository.js';
-import { billRepository } from '../../repositories/bill.repository.js';
 import { voteRepository } from '../../repositories/vote.repository.js';
 import type {
   LegislatorSummary,
@@ -23,12 +22,6 @@ vi.mock('../../repositories/legislator.repository.js', () => ({
     search: vi.fn(),
     getVotingStats: vi.fn(),
     getSponsorshipStats: vi.fn(),
-  },
-}));
-
-vi.mock('../../repositories/bill.repository.js', () => ({
-  billRepository: {
-    findByLegislator: vi.fn(),
   },
 }));
 
@@ -106,12 +99,13 @@ describe('LegislatorService', () => {
       const legislator = result.data[0];
 
       // Verify API format transformations
-      expect(legislator.id).toBe('A000001');
-      expect(legislator.bioguideId).toBe('A000001');
-      expect(legislator.fullName).toBe('John Smith');
-      expect(legislator.chamber).toBe('house'); // lowercase
-      expect(legislator.party).toBe('D');
-      expect(legislator.twitter).toBe('repjohnsmith');
+      expect(legislator).toBeDefined();
+      expect(legislator!.id).toBe('A000001');
+      expect(legislator!.bioguideId).toBe('A000001');
+      expect(legislator!.fullName).toBe('John Smith');
+      expect(legislator!.chamber).toBe('house'); // lowercase
+      expect(legislator!.party).toBe('D');
+      expect(legislator!.twitter).toBe('repjohnsmith');
     });
 
     it('defaults to inOffice=true filter', async () => {
@@ -139,7 +133,7 @@ describe('LegislatorService', () => {
 
     it('uses search endpoint when search param provided', async () => {
       const mockSearchResult = {
-        data: [mockLegislatorSummary],
+        data: [{ ...mockLegislatorSummary, rank: 0.95 }],
         pagination: {
           total: 1,
           page: 1,
@@ -352,10 +346,9 @@ describe('LegislatorService', () => {
       };
 
       const mockSponsorshipStats = {
-        totalBillsSponsored: 25,
-        totalBillsCosponsored: 150,
-        billsBecameLaw: 3,
-        averageCosponsors: 12.5,
+        byStatus: { INTRODUCED: 15, IN_COMMITTEE: 7, BECAME_LAW: 3 } as Record<string, number>,
+        totalSponsored: 25,
+        totalCosponsored: 150,
       };
 
       vi.mocked(legislatorRepository.getVotingStats).mockResolvedValue(mockVotingStats);
