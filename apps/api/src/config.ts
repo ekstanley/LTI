@@ -14,6 +14,9 @@ const envSchema = z.object({
   CONGRESS_API_BASE_URL: z.string().default('https://api.congress.gov/v3'),
   CONGRESS_API_RATE_LIMIT: z.coerce.number().default(1000), // requests per hour
   CONGRESS_SYNC_INTERVAL_MS: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
+  // GovInfo API configuration (bill text in XML/PDF/HTML)
+  GOVINFO_API_KEY: z.string().optional(),
+  GOVINFO_API_BASE_URL: z.string().default('https://api.govinfo.gov'),
 });
 
 const env = envSchema.parse(process.env);
@@ -37,5 +40,9 @@ export const config = {
     baseUrl: env.CONGRESS_API_BASE_URL,
     rateLimit: env.CONGRESS_API_RATE_LIMIT,
     syncIntervalMs: env.CONGRESS_SYNC_INTERVAL_MS,
+  },
+  govinfo: {
+    apiKey: env.GOVINFO_API_KEY,
+    baseUrl: env.GOVINFO_API_BASE_URL,
   },
 } as const;
