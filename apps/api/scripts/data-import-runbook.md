@@ -521,6 +521,32 @@ pnpm --filter @ltip/api run import:reset
 pnpm --filter @ltip/api run import:run
 ```
 
+#### Stale Compiled JavaScript Files (QC-003)
+
+**Symptom**:
+- 404 errors continue infinitely without breaking
+- Code changes don't take effect
+- Log format doesn't match expected output
+- SENATE processed when CHAMBERS only includes 'house'
+
+**Root Cause**: When TypeScript files are compiled locally (e.g., via `tsc`), stale `.js` files may remain in the `scripts/` directory. Node.js module resolution prefers existing `.js` files over `.ts` files, causing tsx to use outdated code.
+
+**Solution**:
+```bash
+# Clean stale compiled files
+pnpm --filter @ltip/api run scripts:clean
+
+# Then run import (this is now automatic in import:run and import:dry-run)
+pnpm --filter @ltip/api run import:run
+```
+
+**Prevention**: The `import:run` and `import:dry-run` scripts now automatically clean stale compiled files before running. If you manually compile TypeScript, always run `scripts:clean` afterward.
+
+**Verification**: Check for stale files:
+```bash
+ls -la apps/api/scripts/*.js 2>/dev/null || echo "No stale .js files"
+```
+
 ### Diagnostic Commands
 
 ```bash

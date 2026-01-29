@@ -17,8 +17,9 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
-    "import:run": "tsx scripts/bulk-import.ts",
-    "import:dry-run": "tsx scripts/bulk-import.ts --dry-run",
+    "scripts:clean": "rm -f scripts/*.js scripts/*.js.map scripts/*.d.ts scripts/*.d.ts.map",
+    "import:run": "pnpm run scripts:clean && tsx scripts/bulk-import.ts",
+    "import:dry-run": "pnpm run scripts:clean && tsx scripts/bulk-import.ts --dry-run",
     "import:status": "tsx scripts/bulk-import.ts --status",
     "import:reset": "tsx scripts/bulk-import.ts --reset"
   },
