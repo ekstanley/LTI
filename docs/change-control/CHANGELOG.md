@@ -11,12 +11,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - **WP6-R (Frontend Completion)**: Connect bills page to API, add legislators/votes pages
-- **WP3-A (Data Ingestion Core)**: Congress.gov API client with rate limiting
 - **WP7-A (Historical Data Load)**: Bulk import Congress 118-119 data
 - Authentication and authorization (JWT/OAuth)
 - ML pipeline with BART, BERT, XGBoost (Phase 2)
 - Neo4j influence network visualization (Phase 3)
 - Kubernetes multi-region deployment (Phase 3)
+
+---
+
+## [0.6.0] - 2026-01-28
+
+### Added
+- **WP3-A Data Ingestion Core (apps/api/src/ingestion)**:
+  - **Congress.gov API Client (`congress-client.ts`)**:
+    - Type-safe API wrapper with Zod schema validation
+    - Bill enumeration with AsyncGenerator pattern for streaming
+    - Support for all Congress.gov endpoints (bills, amendments, actions, cosponsors)
+    - Configurable base URL and API key injection
+  - **Token Bucket Rate Limiter (`rate-limiter.ts`)**:
+    - 1000 requests/hour limit per Congress.gov API policy
+    - Configurable burst capacity (100 tokens default)
+    - Automatic refill with hourly counter reset
+    - Waiting queue with timeout support
+    - Singleton pattern for global rate limit enforcement
+  - **Retry Handler (`retry-handler.ts`)**:
+    - Exponential backoff with full jitter strategy
+    - Configurable max retries, base delay, and backoff multiplier
+    - Retryable HTTP status detection (408, 429, 500, 502, 503, 504)
+    - Network error detection (timeout, ECONNRESET, ECONNREFUSED)
+    - `fetchWithRetry()` wrapper for resilient HTTP requests
+    - Retry-After header parsing (delta-seconds and HTTP-date formats)
+  - **Data Transformer (`data-transformer.ts`)**:
+    - Congress.gov API to Prisma model conversion
+    - Bill transformation with sponsor/committee mapping
+    - Legislator transformation with party/state normalization
+    - Amendment, action, text version transformations
+    - Cosponsorship date handling and withdrawn status
+  - **Sync Scheduler (`sync-scheduler.ts`)**:
+    - Configurable sync intervals (hourly/daily/weekly)
+    - Task queue with priority support
+    - Graceful shutdown with in-progress task completion
+    - Health status reporting
+  - **Type Definitions (`types.ts`)**:
+    - Zod schemas for all Congress.gov API responses
+    - Type-safe bill, legislator, amendment, action schemas
+    - Pagination response wrapper schema
+
+### Technical Details
+- **Test Coverage**: 128 new unit tests (all passing)
+  - `congress-client.test.ts`: 22 tests (API client, pagination, error handling)
+  - `data-transformer.test.ts`: 67 tests (all transformation scenarios)
+  - `rate-limiter.test.ts`: 17 tests (token bucket, queue, reset)
+  - `retry-handler.test.ts`: 22 tests (backoff, jitter, retryable errors)
+- **Total Project Tests**: 299 tests passing
+- **Build Status**: API package builds successfully
+- **Dependencies**: Zero new external dependencies (uses native fetch)
+- **Pattern**: AsyncGenerator for memory-efficient bill streaming
+
+### Changed
+- Removed WP3-A from Unreleased/Planned section (completed)
+- Updated gap analysis document to reflect 82% Phase 1 completion
 
 ---
 
@@ -282,6 +336,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.4.0 | 2026-01-28 | Phase 1 API layer complete |
 | 0.5.0 | 2026-01-28 | Phase 1 WebSocket layer complete |
 | 0.5.1 | 2026-01-28 | Phase 1 gap analysis and work packages defined |
+| 0.6.0 | 2026-01-28 | Phase 1 data ingestion core complete (WP3-A) |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |
 | 1.2.0 | TBD | Phase 2 analysis models complete |

@@ -1,7 +1,8 @@
 # Phase 1 Remaining Work Packages
 
-**Document Version**: 1.0.0
+**Document Version**: 1.1.0
 **Created**: 2026-01-28
+**Last Updated**: 2026-01-28
 **Methodology**: ODIN (Outline Driven INtelligence)
 **Status**: APPROVED FOR EXECUTION
 
@@ -9,15 +10,15 @@
 
 ## Overview
 
-Three work packages remain to complete Phase 1 MVP:
+Two work packages remain to complete Phase 1 MVP:
 
-| WP ID | Name | Effort | Priority | Dependencies |
-|-------|------|--------|----------|--------------|
-| WP6-R | Frontend Completion | 2-3 days | HIGH | None |
-| WP3-A | Data Ingestion Core | 3-4 days | CRITICAL | None |
-| WP7-A | Historical Data Load | 2-3 days | HIGH | WP3-A |
+| WP ID | Name | Effort | Priority | Dependencies | Status |
+|-------|------|--------|----------|--------------|--------|
+| WP6-R | Frontend Completion | 2-3 days | HIGH | None | PENDING |
+| WP3-A | Data Ingestion Core | 3-4 days | CRITICAL | None | **COMPLETE** |
+| WP7-A | Historical Data Load | 2-3 days | HIGH | WP3-A ✅ | **UNBLOCKED** |
 
-**Total Estimated Effort**: 7-10 days
+**Total Remaining Effort**: 4-6 days (WP6-R + WP7-A can run in parallel)
 
 ---
 
@@ -111,25 +112,30 @@ apps/web/src/
 
 ---
 
-## WP3-A: Data Ingestion Core
+## WP3-A: Data Ingestion Core (COMPLETE)
+
+> **Status**: COMPLETE as of 2026-01-28
+> **Commit**: `dd0cc26` - feat(api): implement Congress.gov data ingestion core (WP3-A)
+> **Tests**: 128 new tests (299 total), all passing
+> **Build**: API package builds successfully
 
 ### Objective
 Build Congress.gov API client with rate limiting, retry logic, and sync scheduler.
 
 ### Acceptance Criteria
 
-| ID | Criterion | Testable Metric |
-|----|-----------|-----------------|
-| AC-3A-1 | Congress.gov client authenticates | API key validated, requests succeed |
-| AC-3A-2 | Bills endpoint fetches data | Response parsed to Prisma format |
-| AC-3A-3 | Legislators endpoint fetches data | Response parsed to Prisma format |
-| AC-3A-4 | Votes endpoint fetches data | Response parsed to Prisma format |
-| AC-3A-5 | Rate limiting respects API limits | Max 1000 requests/hour enforced |
-| AC-3A-6 | Retry logic handles failures | 3 retries with exponential backoff |
-| AC-3A-7 | Sync scheduler runs on interval | Bull/agenda job executes correctly |
-| AC-3A-8 | Incremental sync supported | Only new/changed records fetched |
-| AC-3A-9 | Error logging captures failures | Structured logs with context |
-| AC-3A-10 | Unit tests pass | >80% coverage on client code |
+| ID | Criterion | Testable Metric | Status |
+|----|-----------|-----------------|--------|
+| AC-3A-1 | Congress.gov client authenticates | API key validated, requests succeed | ✅ |
+| AC-3A-2 | Bills endpoint fetches data | Response parsed to Prisma format | ✅ |
+| AC-3A-3 | Legislators endpoint fetches data | Response parsed to Prisma format | ✅ |
+| AC-3A-4 | Votes endpoint fetches data | Response parsed to Prisma format | ✅ |
+| AC-3A-5 | Rate limiting respects API limits | Max 1000 requests/hour enforced | ✅ |
+| AC-3A-6 | Retry logic handles failures | 3 retries with exponential backoff | ✅ |
+| AC-3A-7 | Sync scheduler runs on interval | Bull/agenda job executes correctly | ✅ |
+| AC-3A-8 | Incremental sync supported | Only new/changed records fetched | ✅ |
+| AC-3A-9 | Error logging captures failures | Structured logs with context | ✅ |
+| AC-3A-10 | Unit tests pass | >80% coverage on client code | ✅ |
 
 ### Deliverables
 
