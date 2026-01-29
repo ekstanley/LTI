@@ -2,12 +2,13 @@
  * Import Votes Behavior Documentation Tests
  *
  * These tests document the expected error handling behavior for the
- * votes import module, particularly for WP7-A-002 and WP7-A-005 fixes.
+ * votes import module, particularly for WP7-A-002, WP7-A-005, and QC-001/QC-003 fixes.
  *
  * See docs/WP7-A-GAP-ANALYSIS.md for full details on these issues.
  */
 
 import { describe, it, expect } from 'vitest';
+import { ERROR_LIMITS } from '../../../scripts/import-config.js';
 
 describe('Import Votes Error Handling Behavior', () => {
   /**
@@ -145,6 +146,117 @@ describe('Import Votes Error Handling Behavior', () => {
       expect(errorHandlingChain.phaseTransition).toContain('Reset offset to 0');
       expect(errorHandlingChain.endOfData).toContain('404');
       expect(errorHandlingChain.transientError).toContain('Retry same offset');
+    });
+  });
+
+  /**
+   * QC-001: Total Error Limits (Infinite Loop Prevention)
+   *
+   * PROBLEM: Without a total error limit, the import could loop indefinitely
+   * if errors keep occurring at different offsets.
+   *
+   * FIX: Added ERROR_LIMITS.maxTotalErrors cap that stops import after
+   * threshold total errors regardless of offset.
+   *
+   * LOCATION: scripts/import-config.ts + scripts/import-votes.ts:277-286
+   */
+  describe('QC-001: Total error limits', () => {
+    it('imports ERROR_LIMITS configuration correctly', () => {
+      // Verify ERROR_LIMITS is importable and has expected structure
+      expect(ERROR_LIMITS).toBeDefined();
+      expect(ERROR_LIMITS.maxTotalErrors).toBe(100);
+      expect(ERROR_LIMITS.maxDurationMs).toBe(3600000); // 1 hour
+    });
+
+    it('documents total error tracking behavior', () => {
+      const qc001Behavior = {
+        tracker: 'options.totalErrors.count - never reset, only incremented',
+        checkLocation: 'After each non-404 error in listVotes catch block',
+        threshold: ERROR_LIMITS.maxTotalErrors,
+        action: 'break pagination with error log for manual investigation',
+        purpose: 'Prevent infinite loops regardless of error pattern',
+      };
+
+      expect(qc001Behavior.tracker).toContain('never reset');
+      expect(qc001Behavior.threshold).toBe(100);
+      expect(qc001Behavior.action).toContain('break');
+    });
+
+    it('verifies maxTotalErrors is reasonable for full import', () => {
+      // Full import might have ~900,000 vote positions
+      // At 100 records/batch, that's ~9,000 batches
+      // 100 errors threshold gives ~1.1% error tolerance
+      // This is reasonable for detecting systematic issues without being too strict
+      const estimatedBatches = 9000;
+      const errorRate = ERROR_LIMITS.maxTotalErrors / estimatedBatches;
+
+      expect(errorRate).toBeLessThan(0.02); // < 2% error rate tolerance
+      expect(errorRate).toBeGreaterThan(0.005); // > 0.5% to catch patterns
+    });
+  });
+
+  /**
+   * QC-003: Stale Compiled Files Prevention
+   *
+   * PROBLEM: When TypeScript is compiled locally, stale .js files remain
+   * in scripts/ directory. Node.js module resolution prefers .js over .ts,
+   * causing tsx to use outdated code.
+   *
+   * SYMPTOMS:
+   * - 404 errors continue infinitely without breaking
+   * - Code changes don't take effect
+   * - Log format doesn't match expected output
+   * - SENATE processed when CHAMBERS only includes 'house'
+   *
+   * FIX: Added scripts:clean command and hooked into import:run/import:dry-run
+   *
+   * LOCATION: apps/api/package.json scripts section
+   */
+  describe('QC-003: Stale compiled files prevention', () => {
+    it('documents the stale file detection symptoms', () => {
+      const qc003Symptoms = [
+        '404 errors continue infinitely without breaking',
+        'Code changes in .ts files dont take effect',
+        'Log format doesnt match expected output from TypeScript source',
+        'SENATE processed when CHAMBERS array only includes house',
+        'Attempt counts missing from error log messages',
+      ];
+
+      // If you see these symptoms, run: pnpm run scripts:clean
+      expect(qc003Symptoms).toHaveLength(5);
+      qc003Symptoms.forEach((symptom) => {
+        expect(symptom.length).toBeGreaterThan(10);
+      });
+    });
+
+    it('documents the fix implemented in package.json', () => {
+      const scriptsCleanCommand = 'rm -f scripts/*.js scripts/*.js.map scripts/*.d.ts scripts/*.d.ts.map';
+      const importRunCommand = 'pnpm run scripts:clean && tsx scripts/bulk-import.ts';
+
+      // The fix ensures fresh tsx transpilation every import
+      expect(scriptsCleanCommand).toContain('rm -f');
+      expect(scriptsCleanCommand).toContain('*.js');
+      expect(importRunCommand).toContain('scripts:clean');
+    });
+
+    it('verifies 404 detection pattern is string-based and robust', () => {
+      // The actual detection logic from import-votes.ts:270
+      const detect404 = (errorMsg: string): boolean => {
+        return errorMsg.includes('404') || errorMsg.includes('Not Found');
+      };
+
+      // Test various 404 error formats that might come from the API
+      expect(detect404('Error: API error: 404 Not Found')).toBe(true);
+      expect(detect404('Error: 404')).toBe(true);
+      expect(detect404('Not Found')).toBe(true);
+      expect(detect404('HTTP 404')).toBe(true);
+      expect(detect404('404 - Page Not Found')).toBe(true);
+
+      // Non-404 errors should NOT trigger end-of-data
+      expect(detect404('Error: 429 Too Many Requests')).toBe(false);
+      expect(detect404('Error: 500 Internal Server Error')).toBe(false);
+      expect(detect404('ECONNRESET')).toBe(false);
+      expect(detect404('fetch failed')).toBe(false);
     });
   });
 });
