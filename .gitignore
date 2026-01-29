@@ -61,3 +61,12 @@ models/*.pt
 models/*.bin
 models/*.safetensors
 !models/.gitkeep
+
+# Import checkpoints (runtime data)
+apps/api/.import-checkpoints/
+
+# TypeScript build artifacts in scripts
+apps/api/scripts/*.d.ts
+apps/api/scripts/*.d.ts.map
+apps/api/scripts/*.js
+apps/api/scripts/*.js.map
