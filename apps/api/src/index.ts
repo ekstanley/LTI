@@ -53,6 +53,7 @@ app.use('/api/health', healthRouter);
 app.use('/api/v1/bills', billsRouter);
 app.use('/api/v1/legislators', legislatorsRouter);
 app.use('/api/v1/votes', votesRouter);
+app.use('/api/v1/voting-record', votesRouter); // Alias for votes (common alternative naming)
 app.use('/api/v1/analysis', analysisRouter);
 app.use('/api/v1/conflicts', conflictsRouter);
 app.use('/api/v1/committees', committeesRouter);

@@ -1,8 +1,15 @@
 /**
  * WebSocket Authentication
  *
- * MVP: Token format validation and user extraction stub.
- * Full JWT verification will be implemented in Phase 2.
+ * ╔══════════════════════════════════════════════════════════════════════╗
+ * ║  SECURITY NOTICE (MVP)                                               ║
+ * ║  This module validates JWT FORMAT but does NOT verify signatures.    ║
+ * ║  Acceptable for MVP: all data is public, no sensitive operations.    ║
+ * ║  Phase 2 MUST implement jsonwebtoken.verify() before adding:         ║
+ * ║  - User-specific data access                                         ║
+ * ║  - Write operations                                                  ║
+ * ║  - Any authenticated-only features                                   ║
+ * ╚══════════════════════════════════════════════════════════════════════╝
  *
  * Token can be provided via:
  * - Query string: ws://host/ws?token=xxx
@@ -117,7 +124,11 @@ function extractUserIdFromToken(token: string): string | null {
     };
 
     return payload.sub ?? payload.userId ?? null;
-  } catch {
+  } catch (error) {
+    logger.debug(
+      { error: error instanceof Error ? error.message : String(error) },
+      'Failed to extract user ID from JWT payload'
+    );
     return null;
   }
 }

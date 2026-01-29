@@ -144,6 +144,35 @@ export const billService = {
   },
 
   /**
+   * Safely convert Date or ISO string to ISO string
+   * (Handles cache deserialization where Dates become strings)
+   */
+  toISODate(value: Date | string): string {
+    if (typeof value === 'string') {
+      return value;
+    }
+    return value.toISOString();
+  },
+
+  /**
+   * Get all bill sponsors (primary + cosponsors)
+   */
+  async getSponsors(billId: string) {
+    const bill = await billRepository.findById(billId);
+    if (!bill) return [];
+
+    return bill.sponsors.map((s) => ({
+      id: s.legislator.id,
+      fullName: s.legislator.fullName,
+      party: partyToApi(s.legislator.party),
+      state: s.legislator.state,
+      chamber: chamberToApi(s.legislator.chamber),
+      isPrimary: s.isPrimary,
+      ...(s.cosponsorDate != null && { cosponsorDate: this.toISODate(s.cosponsorDate) }),
+    }));
+  },
+
+  /**
    * Get bill cosponsors
    */
   async getCosponsors(billId: string) {
@@ -158,7 +187,7 @@ export const billService = {
         party: partyToApi(s.legislator.party),
         state: s.legislator.state,
         chamber: chamberToApi(s.legislator.chamber),
-        ...(s.cosponsorDate != null && { cosponsorDate: s.cosponsorDate.toISOString() }),
+        ...(s.cosponsorDate != null && { cosponsorDate: this.toISODate(s.cosponsorDate) }),
       }));
   },
 
