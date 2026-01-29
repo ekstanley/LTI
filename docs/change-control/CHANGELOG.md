@@ -18,6 +18,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2026-01-29
+
+### Added
+- **WP8 Historical Data Execution (apps/api/scripts)**:
+  - **Votes Import Execution**: Congress 118 House votes import in progress
+  - **Database Verification Script (`count-votes.ts`)**:
+    - Real-time vote count verification against checkpoint
+    - Breakdown by Congress number
+    - Monorepo-compatible dotenv path resolution
+
+### Fixed
+- **WP8-BUG7: Prisma billId Relation Syntax (`import-votes.ts`)**:
+  - Changed `billId: matchingBill.id` to `billId: { connect: { id: matchingBill.id } }`
+  - Prisma v5+ requires explicit relation connect syntax for foreign keys
+- **WP8-BUG8: NaN Vote Totals (`data-transformer.ts`, `import-votes.ts`)**:
+  - Added nullish coalescing (`?? 0`) to `reduce()` callbacks
+  - Prevents NaN when `votePartyTotal` array is empty or missing values
+  - Affected fields: yeas, nays, present, notVoting
+
+### Technical Details
+- **Import Progress**: 640/1,800 House votes (35.6% as of latest checkpoint)
+- **Database Verification**: 652 votes in database (Congress 118)
+- **Rate Limiting**: 3 graceful timeout recoveries during import
+- **Bug Fixes Verified**: Both fixes confirmed working through live import observation
+- **Pattern Applied**: Monorepo dotenv loading with explicit path resolution
+
+### In Progress
+- Votes import continuing in background (estimated 45-60 minutes remaining)
+- QC verification and screenshot capture pending
+
+---
+
 ## [0.7.0] - 2026-01-28
 
 ### Added
