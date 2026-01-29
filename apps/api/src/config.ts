@@ -9,6 +9,11 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+  // Congress.gov API configuration
+  CONGRESS_API_KEY: z.string().optional(),
+  CONGRESS_API_BASE_URL: z.string().default('https://api.congress.gov/v3'),
+  CONGRESS_API_RATE_LIMIT: z.coerce.number().default(1000), // requests per hour
+  CONGRESS_SYNC_INTERVAL_MS: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
 });
 
 const env = envSchema.parse(process.env);
@@ -26,5 +31,11 @@ export const config = {
   rateLimit: {
     windowMs: env.RATE_LIMIT_WINDOW_MS,
     maxRequests: env.RATE_LIMIT_MAX_REQUESTS,
+  },
+  congress: {
+    apiKey: env.CONGRESS_API_KEY,
+    baseUrl: env.CONGRESS_API_BASE_URL,
+    rateLimit: env.CONGRESS_API_RATE_LIMIT,
+    syncIntervalMs: env.CONGRESS_SYNC_INTERVAL_MS,
   },
 } as const;
