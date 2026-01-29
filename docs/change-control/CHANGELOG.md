@@ -10,12 +10,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- Congress.gov and OpenStates API integrations
-- Frontend bill listing and detail pages
+- **WP6-R (Frontend Completion)**: Connect bills page to API, add legislators/votes pages
+- **WP3-A (Data Ingestion Core)**: Congress.gov API client with rate limiting
+- **WP7-A (Historical Data Load)**: Bulk import Congress 118-119 data
 - Authentication and authorization (JWT/OAuth)
 - ML pipeline with BART, BERT, XGBoost (Phase 2)
 - Neo4j influence network visualization (Phase 3)
 - Kubernetes multi-region deployment (Phase 3)
+
+---
+
+## [0.5.1] - 2026-01-28
+
+### Added
+- **Phase 1 Gap Analysis (docs/plans/2026-01-28-phase1-gap-analysis.md)**:
+  - Comprehensive assessment of Phase 1 completion status (68%)
+  - Work package status: WP1-WP5 complete, WP3/WP6/WP7 remaining
+  - Risk assessment with mitigation strategies
+  - Exit criteria verification table
+- **Remaining Work Packages (docs/plans/2026-01-28-phase1-remaining-workpackages.md)**:
+  - WP6-R: Frontend Completion (2-3 days, 10 acceptance criteria)
+  - WP3-A: Data Ingestion Core (3-4 days, 10 acceptance criteria)
+  - WP7-A: Historical Data Load (2-3 days, 10 acceptance criteria)
+  - Architecture diagrams for ingestion pipeline
+  - Detailed effort estimates with confidence levels
+  - Execution schedule with critical path analysis
+
+### Fixed
+- TypeScript test mock types aligned with Prisma schema definitions
+- `BillTextVersion.textHash` changed from nullable to required in tests
+- `BillTextVersion.textFormat` uses `as const` assertion for enum type
+- Legislator service tests use correct `getSponsorshipStats` return type
+- Removed unused `billRepository` import from legislator service tests
+
+### Technical Details
+- Total tests: 171 passing (9 test files)
+- Test categories: Mapper (98), Service (25), WebSocket (48)
+- Build status: All packages build successfully
 
 ---
 
@@ -250,6 +281,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.3.0 | 2026-01-28 | Phase 1 data layer complete |
 | 0.4.0 | 2026-01-28 | Phase 1 API layer complete |
 | 0.5.0 | 2026-01-28 | Phase 1 WebSocket layer complete |
+| 0.5.1 | 2026-01-28 | Phase 1 gap analysis and work packages defined |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |
 | 1.2.0 | TBD | Phase 2 analysis models complete |
