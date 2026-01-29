@@ -1,4 +1,9 @@
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
 import { z } from 'zod';
+
+// Load environment variables from repository root (handles scripts running from different dirs)
+loadEnv({ path: resolve(import.meta.dirname, '../../../.env') });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
