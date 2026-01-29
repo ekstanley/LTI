@@ -230,8 +230,56 @@ Changes restricted during:
 
 ---
 
+## Active Change Log
+
+### CR-2026-01-29-001: WP7-A Historical Data Load QC Fixes
+
+**Status**: Implemented
+**Category**: 2 (Standard Change)
+**Priority**: High
+
+#### Timeline
+- Requested: 2026-01-29
+- Reviewed: 2026-01-29
+- Approved: 2026-01-29
+- Implemented: 2026-01-29
+
+#### Description
+Quality control fixes for the WP7-A Historical Data Load system to address error handling issues discovered during testing.
+
+#### Changes Implemented
+
+| ID | Issue | Fix | Location |
+|----|-------|-----|----------|
+| WP7-A-001 | Offset leakage between phases | Reset offset to 0 when starting new phase | `import-votes.ts:listVotes()` |
+| WP7-A-002 | 404 only detected at offset=0 | 404 detection at ANY offset breaks pagination | `import-votes.ts:254-260` |
+| WP7-A-005 | Data loss on transient errors | Retry same offset, track consecutive errors | `import-votes.ts:262-275` |
+| QC-001 | Infinite loop risk | Total error limit (100) stops import | `import-config.ts`, `import-votes.ts:277-286` |
+| QC-003 | Stale compiled .js files | `scripts:clean` command, hooked into import scripts | `package.json` |
+
+#### Affected Components
+- [x] Backend API
+- [x] Documentation
+- [ ] Frontend
+- [ ] Database
+- [ ] ML Pipeline
+- [ ] Infrastructure
+
+#### Verification Results
+- All 349 unit tests pass
+- Dry-run completes successfully (5/5 phases)
+- 404 detection verified at various offsets
+- Stale file cleanup prevents infinite loop
+
+#### Commits
+- `5e6f36a` fix(api): add safeguard to clean stale compiled JS files before import
+- `e3ba937` test(api): add behavior documentation tests for import error handling
+
+---
+
 ## Document Control
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.1.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-001 (WP7-A QC Fixes) |
 | 1.0.0 | 2026-01-28 | ODIN | Initial version |

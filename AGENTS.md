@@ -276,6 +276,211 @@ Check in order (highest severity first):
 
 ---
 
+## AI Agent Capabilities (ODIN Framework)
+
+> **Last Updated**: 2026-01-29 (WP7-A QC Phase)
+
+This section documents the AI capabilities available for LTIP development. Use these agents, skills, and tools to accelerate development while maintaining quality.
+
+### Specialized Development Agents
+
+Launch via `Task` tool with `subagent_type` parameter. Agents run autonomously and return results.
+
+#### Code Quality & Review
+
+| Agent | Use Case |
+|-------|----------|
+| `odin:code-reviewer` | Expert code review (quality, security, maintainability) |
+| `odin:security-auditor` | Security vulnerabilities, OWASP compliance, auth flows |
+| `odin:typescript-pro` | Advanced TypeScript patterns, type safety, generics |
+| `odin:javascript-pro` | ES6+, async patterns, Node.js optimization |
+| `odin:python-pro` | Python optimization, testing, async |
+| `odin:database-optimizer` | SQL optimization, indexes, N+1 problems |
+| `everything-claude-code:code-reviewer` | Comprehensive code review with style guide adherence |
+| `pr-review-toolkit:code-reviewer` | PR-specific review for guidelines compliance |
+| `pr-review-toolkit:silent-failure-hunter` | Find silent failures, inadequate error handling |
+
+#### Architecture & Planning
+
+| Agent | Use Case |
+|-------|----------|
+| `odin:architect` | System architecture, technical decisions |
+| `odin:backend-architect` | Backend systems, API design, service architecture |
+| `feature-dev:code-architect` | Feature implementation blueprints |
+| `everything-claude-code:planner` | Step-by-step implementation plans |
+| `Plan` | Software architect for implementation strategies |
+| `Explore` | Fast codebase exploration, file patterns, keyword search |
+
+#### Testing & Debugging
+
+| Agent | Use Case |
+|-------|----------|
+| `odin:test-writer` | Unit, integration, functional test suites |
+| `odin:advanced-test-designer` | Stress testing, fuzz testing, chaos engineering |
+| `odin:debugger` | Root cause analysis, error interpretation |
+| `odin:investigator` | Deep debugging, issue tracing |
+| `pr-review-toolkit:pr-test-analyzer` | Test coverage quality for PRs |
+| `everything-claude-code:tdd-guide` | Test-driven development workflow |
+
+#### Documentation & Refactoring
+
+| Agent | Use Case |
+|-------|----------|
+| `odin:docs` / `odin:docs-architect` | Technical documentation, architecture guides |
+| `odin:refactorer` | Code restructuring, design improvements |
+| `odin:refactor-planner` | Detailed refactoring plans with migration paths |
+| `odin:modernizer` | Legacy code updates to modern standards |
+| `odin:tech-debt-resolver` | Technical debt assessment and remediation |
+
+#### Performance & Optimization
+
+| Agent | Use Case |
+|-------|----------|
+| `odin:performance` | Holistic performance optimization |
+| `odin:memory-expert` | Memory usage patterns, leak detection |
+| `odin:concurrency-expert` | Thread safety, race conditions, async patterns |
+
+### Skills (Invoked via `Skill` tool)
+
+Skills provide methodology guidance and structured workflows.
+
+#### Development Methodologies
+
+| Skill | Description |
+|-------|-------------|
+| `test-driven` | XP-style TDD: RED → GREEN → REFACTOR workflow |
+| `validation-first` | Formal specifications with Quint |
+| `design-by-contract` | Preconditions, postconditions, invariants |
+| `proof-driven` | Formal verification with Lean 4 |
+| `type-driven` | Idris 2 dependent types workflow |
+
+#### Superpowers (Enhanced Workflows)
+
+| Skill | Description |
+|-------|-------------|
+| `superpowers:brainstorming` | Creative exploration before implementation |
+| `superpowers:writing-plans` | Structured implementation planning |
+| `superpowers:systematic-debugging` | Methodical bug resolution |
+| `superpowers:test-driven-development` | TDD workflow enforcement |
+| `superpowers:verification-before-completion` | Evidence-based completion verification |
+| `superpowers:requesting-code-review` | Pre-merge review workflow |
+| `superpowers:dispatching-parallel-agents` | Independent task parallelization |
+
+#### Design & Frontend
+
+| Skill | Description |
+|-------|-------------|
+| `frontend-design:frontend-design` | Production-grade UI components |
+| `figma:implement-design` | Figma to code with visual fidelity |
+| `prompt-engineering` | LLM prompt optimization |
+
+### MCP Tools Reference
+
+Advanced tooling available through MCP servers.
+
+#### Code Intelligence (Serena)
+
+```
+mcp__plugin_serena_serena__find_symbol        # Symbol search by name path
+mcp__plugin_serena_serena__get_symbols_overview # File symbol overview
+mcp__plugin_serena_serena__find_referencing_symbols # Reference finder
+mcp__plugin_serena_serena__replace_symbol_body # Symbol replacement
+mcp__plugin_serena_serena__search_for_pattern # Regex pattern search
+```
+
+#### AST-based Code Operations
+
+```
+mcp__plugin_odin_ast-grep__find_code          # AST pattern search
+mcp__plugin_odin_ast-grep__find_code_by_rule  # YAML rule search
+mcp__plugin_odin_ast-grep__dump_syntax_tree   # Syntax tree inspection
+mcp__plugin_odin_code-index__search_code_advanced # Advanced code search
+mcp__plugin_odin_code-index__get_symbol_body  # Symbol body retrieval
+```
+
+#### Research & Documentation
+
+```
+mcp__plugin_context7_context7__resolve-library-id  # Library ID lookup
+mcp__plugin_context7_context7__query-docs          # Library docs query
+mcp__plugin_perplexity_perplexity__perplexity_search # Web search
+mcp__plugin_perplexity_perplexity__perplexity_research # Deep research
+mcp__exa__web_search_exa                           # Exa web search
+mcp__exa__get_code_context_exa                     # Code context search
+```
+
+#### Thinking & Analysis
+
+```
+mcp__plugin_odin_sequentialthinking-tools__sequentialthinking_tools # Problem decomposition
+mcp__plugin_odin_actor-critic-thinking__actor-critic-thinking      # Dual-perspective analysis
+mcp__plugin_odin_shannon-thinking__shannonthinking                  # Uncertainty modeling
+mcp__plugin_odin_Check__vibe_check                                  # Assumption checking
+```
+
+#### PR & Review (Greptile)
+
+```
+mcp__plugin_greptile_greptile__list_pull_requests  # PR listing
+mcp__plugin_greptile_greptile__get_merge_request   # PR details
+mcp__plugin_greptile_greptile__trigger_code_review # Automated review
+mcp__plugin_greptile_greptile__search_custom_context # Pattern search
+```
+
+#### Browser Automation (Playwright/Chrome)
+
+```
+mcp__plugin_playwright_playwright__browser_navigate # Page navigation
+mcp__plugin_playwright_playwright__browser_snapshot # A11y tree capture
+mcp__plugin_playwright_playwright__browser_click    # Element interaction
+mcp__chrome_devtools__take_snapshot                 # DevTools snapshot
+mcp__chrome_devtools__performance_start_trace       # Performance trace
+```
+
+### Slash Commands
+
+Quick-access commands for common operations.
+
+| Command | Description |
+|---------|-------------|
+| `/commit-commands:commit` | Git commit workflow |
+| `/commit-commands:commit-push-pr` | Commit, push, and PR creation |
+| `/pr-review-toolkit:review-pr [aspects]` | Comprehensive PR review |
+| `/everything-claude-code:plan` | Implementation planning |
+| `/everything-claude-code:tdd` | TDD workflow |
+| `/code-review:code-review` | Code review PR |
+
+### Usage Examples
+
+#### Multi-Agent Parallel Execution
+
+```markdown
+# Launch multiple independent agents simultaneously
+Task: Launch code-reviewer and security-auditor in parallel
+→ Both agents run concurrently, return combined results
+```
+
+#### Skill-Guided Development
+
+```markdown
+# Invoke TDD skill before implementing feature
+1. Skill: test-driven
+2. Follow RED → GREEN → REFACTOR workflow
+3. Skill: verification-before-completion
+4. Commit with evidence of passing tests
+```
+
+#### Research-First Implementation
+
+```markdown
+# Query documentation before implementation
+1. mcp__plugin_context7_context7__resolve-library-id (find library)
+2. mcp__plugin_context7_context7__query-docs (get patterns)
+3. Implement following documented patterns
+```
+
+---
+
 ## Critical Files Reference
 
 - `MASTER_SPECIFICATION.md`: Complete technical specification (2,300+ lines)
