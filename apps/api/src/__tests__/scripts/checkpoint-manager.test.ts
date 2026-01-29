@@ -79,7 +79,7 @@ describe('CheckpointManager', () => {
   describe('load', () => {
     it('loads existing checkpoint from disk', () => {
       // Create and save a checkpoint
-      const created = manager.create({ runId: 'test-load' });
+      manager.create({ runId: 'test-load' });
       manager.update({ offset: 500, recordsProcessed: 500 });
       manager.flush();
 
@@ -176,6 +176,25 @@ describe('CheckpointManager', () => {
       manager.update({ phase: 'bills' });
 
       expect(manager.getState()!.phase).toBe('bills');
+    });
+
+    it('does NOT auto-reset offset when phase changes (WP7-A-001 documentation)', () => {
+      // IMPORTANT: This test documents that CheckpointManager.update() does NOT
+      // automatically reset offset when phase changes. The orchestrator (bulk-import.ts)
+      // is responsible for explicitly resetting offset when starting a new phase.
+      // See WP7-A-001 in docs/WP7-A-GAP-ANALYSIS.md for the bug this behavior caused.
+      manager.create();
+      manager.update({ offset: 500, recordsProcessed: 500 });
+
+      // Change phase without explicitly resetting offset
+      manager.update({ phase: 'bills' });
+
+      // Offset is preserved - this is expected behavior
+      // The fix in bulk-import.ts executePhase() handles this correctly
+      const state = manager.getState()!;
+      expect(state.phase).toBe('bills');
+      expect(state.offset).toBe(500); // NOT reset - caller's responsibility
+      expect(state.recordsProcessed).toBe(500); // NOT reset - caller's responsibility
     });
 
     it('merges metadata', () => {

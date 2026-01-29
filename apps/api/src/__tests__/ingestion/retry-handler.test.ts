@@ -160,10 +160,17 @@ describe('RetryHandler', () => {
         useJitter: false,
       });
 
-      // Advance through all retries
-      await vi.advanceTimersByTimeAsync(1000);
+      // Capture rejection BEFORE advancing timers to prevent unhandled rejection
+      let caughtError: unknown;
+      promise.catch((e) => {
+        caughtError = e;
+      });
 
-      await expect(promise).rejects.toThrow(RetryExhaustedError);
+      // Run all timers to completion
+      await vi.runAllTimersAsync();
+
+      // Verify the error was a RetryExhaustedError
+      expect(caughtError).toBeInstanceOf(RetryExhaustedError);
       expect(operation).toHaveBeenCalledTimes(3); // Initial + 2 retries
     });
 
