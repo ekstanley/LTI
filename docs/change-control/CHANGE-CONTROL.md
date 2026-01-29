@@ -1,7 +1,7 @@
 # Change Control Process
 
 **Project**: LTIP (Legislative Tracking Intelligence Platform)
-**Version**: 1.3.0
+**Version**: 1.4.0
 **Last Updated**: 2026-01-29
 
 ---
@@ -377,12 +377,34 @@ See: `docs/plans/2026-01-29-wp6r-frontend-completion.md`
 - T5-T8: Implement full page content (currently stubs)
 - Full integration test with live API
 
+#### QC Findings (2026-01-29)
+
+Four parallel QC agents reviewed the implementation:
+
+| Agent | Score | Key Findings |
+|-------|-------|--------------|
+| Code Reviewer | 7.5/10 | SSR hydration issues, SWR type narrowing needed |
+| Security Auditor | 7.5/10 | Missing CSP headers, unvalidated route params |
+| TypeScript Pro | 8.5/10 | Good type coverage, minor improvements identified |
+| Test Writer | N/A | **CRITICAL**: Zero frontend test coverage |
+
+**Action Items**:
+1. Add Vitest + React Testing Library for frontend tests
+2. Validate route params with Zod schema
+3. Configure CSP headers in next.config.js
+4. Target 50% frontend coverage before Phase 1 closure
+
+#### Commits
+- `30e5b13` feat(web): implement WP6-R frontend infrastructure (T1-T4, T9)
+- `4a864fa` docs: update gap analysis and change control with WP6-R QC findings
+
 ---
 
 ## Document Control
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.4.0 | 2026-01-29 | ODIN | Added QC findings and commit references to CR-2026-01-29-002 |
 | 1.3.0 | 2026-01-29 | ODIN | Updated CR-2026-01-29-002: WP6R-T1 through T4 implemented |
 | 1.2.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-002 (WP6-R Frontend Completion) |
 | 1.1.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-001 (WP7-A QC Fixes) |
