@@ -287,8 +287,12 @@ export class CheckpointManager {
       this.state.completedPhases.push(this.state.phase);
     }
 
-    // Move to next phase
-    this.state.phase = IMPORT_PHASES[currentIndex + 1];
+    // Move to next phase (index is validated above to be within bounds)
+    const nextPhase = IMPORT_PHASES[currentIndex + 1];
+    if (!nextPhase) {
+      throw new Error(`Invalid phase index: ${currentIndex + 1}`);
+    }
+    this.state.phase = nextPhase;
     this.state.offset = 0;
     this.state.recordsProcessed = 0;
     this.state.congress = null;

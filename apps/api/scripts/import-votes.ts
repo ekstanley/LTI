@@ -2,16 +2,18 @@
  * Import Votes
  *
  * Fetches all roll call votes from Congress.gov for targeted congresses (118, 119)
- * and upserts them into the database. This is the largest dataset (~900,000 positions)
- * and uses a two-phase approach: roll call votes first, then individual positions.
+ * and upserts them into the database.
+ *
+ * IMPORTANT: The Congress.gov API only provides House vote endpoints (house-vote).
+ * Senate roll call votes are NOT available through this API and would require
+ * scraping senate.gov directly if needed.
  *
  * Import Strategy:
  * 1. Iterate over each target congress (118, 119)
- * 2. For each congress, iterate over chambers (house, senate)
- * 3. For each session (1, 2), fetch roll call votes
- * 4. Upsert RollCallVote records
- * 5. For each roll call, fetch and upsert individual Vote positions
- * 6. Track progress in checkpoint with congress/chamber/session/offset
+ * 2. For each session (1, 2), fetch House roll call votes
+ * 3. Upsert RollCallVote records
+ * 4. For each roll call, fetch and upsert individual Vote positions
+ * 5. Track progress in checkpoint with congress/chamber/session/offset
  *
  * @module scripts/import-votes
  */
@@ -97,9 +99,10 @@ interface CongressVoteMember {
 
 /**
  * Congress.gov API response wrapper for vote list
+ * Note: API returns "houseRollCallVotes" for House chamber votes
  */
 interface VoteListResponse {
-  votes: CongressVoteListItem[];
+  houseRollCallVotes: CongressVoteListItem[];
   pagination?: {
     count: number;
     next?: string;
@@ -109,9 +112,10 @@ interface VoteListResponse {
 
 /**
  * Congress.gov API response wrapper for vote detail
+ * Note: API returns "houseRollCallVote" for House chamber vote details
  */
 interface VoteDetailResponse {
-  vote: CongressVoteDetail;
+  houseRollCallVote: CongressVoteDetail;
 }
 
 // =============================================================================
@@ -134,9 +138,12 @@ interface ImportStats {
   }>;
 }
 
-type ChamberKey = 'house' | 'senate';
+// Note: Congress.gov API only provides House vote endpoints (house-vote).
+// Senate votes are not available through the Congress.gov API.
+// If Senate vote data is needed, it would require scraping senate.gov directly.
+type ChamberKey = 'house';
 
-const CHAMBERS: ChamberKey[] = ['house', 'senate'];
+const CHAMBERS: ChamberKey[] = ['house'];
 const SESSIONS: number[] = [1, 2];
 
 // =============================================================================
@@ -177,7 +184,9 @@ const rateLimiter = getCongressApiLimiter();
  * Build API URL with authentication
  */
 function buildApiUrl(endpoint: string, params: Record<string, string | number> = {}): string {
-  const url = new URL(endpoint, config.congress.baseUrl);
+  // Note: URL constructor replaces base path when endpoint starts with /
+  // So we concatenate manually to preserve the /v3 path segment
+  const url = new URL(`${config.congress.baseUrl}${endpoint}`);
 
   if (config.congress.apiKey) {
     url.searchParams.set('api_key', config.congress.apiKey);
@@ -196,7 +205,7 @@ function buildApiUrl(endpoint: string, params: Record<string, string | number> =
  * Fetch with rate limiting and retry
  */
 async function apiFetch<T>(url: string): Promise<T> {
-  await rateLimiter.waitForToken();
+  await rateLimiter.acquire();
 
   const response = await fetchWithRetry(url, {
     headers: {
@@ -222,9 +231,12 @@ async function* listVotes(
 ): AsyncGenerator<CongressVoteListItem, void, unknown> {
   const limit = options.limit ?? BATCH_SIZES.votes;
   let offset = options.offset ?? 0;
+  let consecutiveErrors = 0;
+  const MAX_CONSECUTIVE_ERRORS = 3;
 
   while (true) {
-    const endpoint = `/${chamber}-vote/${congress}`;
+    // Congress.gov API requires session in path: /{chamber}-vote/{congress}/{session}
+    const endpoint = `/${chamber}-vote/${congress}/${session}`;
     const url = buildApiUrl(endpoint, {
       limit,
       offset,
@@ -235,15 +247,35 @@ async function* listVotes(
     let response: VoteListResponse;
     try {
       response = await apiFetch<VoteListResponse>(url);
+      consecutiveErrors = 0; // Reset on success
     } catch (error) {
-      log('warn', `Failed to fetch votes at offset ${offset}: ${error}`);
-      // Try to continue with next batch
-      offset += limit;
-      if (offset > 10000) break; // Safety limit
+      // WP7-A-002 FIX: More robust 404 detection and consecutive error handling
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      const is404 = errorMsg.includes('404') || errorMsg.includes('Not Found');
+
+      if (is404) {
+        // 404 at any offset means end of data for this congress/chamber/session
+        log('info', `End of votes data at offset ${offset} (404 - no more pages)`);
+        break;
+      }
+
+      // Track consecutive errors at the SAME offset (WP7-A-005 FIX: prevent data loss)
+      consecutiveErrors++;
+      log('warn', `Failed to fetch votes at offset ${offset} (attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${errorMsg}`);
+
+      if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+        // After max retries at the same offset, this is a persistent error
+        // Log and stop to prevent infinite loops - manual intervention required
+        log('error', `Stopping votes pagination after ${MAX_CONSECUTIVE_ERRORS} consecutive errors at offset ${offset}. Manual retry may be needed.`);
+        break;
+      }
+
+      // WP7-A-005 FIX: Retry the SAME offset for transient errors (429, 500, etc.)
+      // Do NOT advance offset - this would permanently skip data
       continue;
     }
 
-    const votes = response.votes ?? [];
+    const votes = response.houseRollCallVotes ?? [];
 
     // Filter by session
     const sessionVotes = votes.filter(v => v.sessionNumber === session);
@@ -267,16 +299,18 @@ async function* listVotes(
 async function getVoteDetail(
   congress: number,
   chamber: ChamberKey,
+  session: number,
   rollCallNumber: number
 ): Promise<CongressVoteDetail | null> {
-  const endpoint = `/${chamber}-vote/${congress}/${rollCallNumber}`;
+  // Congress.gov API requires: /{chamber}-vote/{congress}/{session}/{rollCallNumber}
+  const endpoint = `/${chamber}-vote/${congress}/${session}/${rollCallNumber}`;
   const url = buildApiUrl(endpoint);
 
   try {
     const response = await apiFetch<VoteDetailResponse>(url);
-    return response.vote ?? null;
+    return response.houseRollCallVote ?? null;
   } catch (error) {
-    log('warn', `Failed to fetch vote detail ${chamber}-${congress}-${rollCallNumber}: ${error}`);
+    log('warn', `Failed to fetch vote detail ${chamber}-${congress}-${session}-${rollCallNumber}: ${error}`);
     return null;
   }
 }
@@ -321,13 +355,16 @@ function mapVoteResult(result: string): VoteResult {
 
 /**
  * Map API vote type string to Prisma VoteType enum
+ *
+ * Schema enum values: ROLL_CALL, VOICE, UNANIMOUS_CONSENT, DIVISION
  */
 function mapVoteType(voteType?: string): VoteType {
-  if (!voteType) return 'RECORDED';
+  if (!voteType) return 'ROLL_CALL';
 
   const normalized = voteType.toLowerCase();
+  // Yea/Nay votes are roll call votes
   if (normalized.includes('yea') || normalized.includes('nay')) {
-    return 'YEA_NAY';
+    return 'ROLL_CALL';
   }
   if (normalized.includes('voice')) {
     return 'VOICE';
@@ -338,11 +375,18 @@ function mapVoteType(voteType?: string): VoteType {
   if (normalized.includes('division')) {
     return 'DIVISION';
   }
-  return 'RECORDED';
+  // "Recorded" votes are roll call votes
+  if (normalized.includes('recorded') || normalized.includes('roll')) {
+    return 'ROLL_CALL';
+  }
+  return 'ROLL_CALL'; // Default to roll call (most common)
 }
 
 /**
  * Map API vote category to Prisma VoteCategory enum
+ *
+ * Schema enum values: PASSAGE, AMENDMENT, PROCEDURAL, CLOTURE, NOMINATION,
+ *   TREATY, VETO_OVERRIDE, MOTION_TO_RECOMMIT, MOTION_TO_TABLE, IMPEACHMENT
  */
 function mapVoteCategory(category?: string): VoteCategory {
   if (!category) return 'PASSAGE';
@@ -357,14 +401,22 @@ function mapVoteCategory(category?: string): VoteCategory {
   if (normalized.includes('cloture')) {
     return 'CLOTURE';
   }
-  if (normalized.includes('motion')) {
-    return 'MOTION';
+  // Specific motion types
+  if (normalized.includes('motion to recommit') || normalized.includes('recommit')) {
+    return 'MOTION_TO_RECOMMIT';
   }
-  if (normalized.includes('procedural')) {
+  if (normalized.includes('motion to table') || normalized.includes('table')) {
+    return 'MOTION_TO_TABLE';
+  }
+  // Generic motions map to PROCEDURAL
+  if (normalized.includes('motion') || normalized.includes('procedural')) {
     return 'PROCEDURAL';
   }
   if (normalized.includes('nomination')) {
     return 'NOMINATION';
+  }
+  if (normalized.includes('treaty')) {
+    return 'TREATY';
   }
   if (normalized.includes('veto')) {
     return 'VETO_OVERRIDE';
@@ -505,7 +557,7 @@ async function upsertRollCallVote(
           nays: vote.nays,
           present: vote.present,
           notVoting: vote.notVoting,
-          lastSyncedAt: vote.lastSyncedAt,
+          // Note: RollCallVote model doesn't have lastSyncedAt field
         },
       });
       return { created: false, updated: true, skipped: false };
@@ -607,17 +659,6 @@ function getEstimatedTotal(): number {
   let total = 0;
   for (const congress of TARGET_CONGRESSES) {
     total += ESTIMATED_COUNTS.votes[congress] ?? 0;
-  }
-  return total;
-}
-
-/**
- * Get the estimated total position count for all target congresses.
- */
-function getEstimatedPositionTotal(): number {
-  let total = 0;
-  for (const congress of TARGET_CONGRESSES) {
-    total += ESTIMATED_COUNTS.votePositions[congress] ?? 0;
   }
   return total;
 }
@@ -796,7 +837,7 @@ export async function importVotes(options: ImportOptions): Promise<void> {
             rollCallCount++;
 
             // Fetch detailed vote information
-            const detail = await getVoteDetail(congress, chamber, voteListItem.rollCallNumber);
+            const detail = await getVoteDetail(congress, chamber, session, voteListItem.rollCallNumber);
 
             if (!detail) {
               stats.rollCallsSkipped++;

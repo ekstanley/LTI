@@ -203,44 +203,53 @@ async function validateVoteCounts(): Promise<ValidationResult[]> {
 
 /**
  * Validate referential integrity: bill sponsors
+ * Note: BillSponsor.legislatorId is a required FK, so DB constraints ensure validity.
+ * We validate that bills have at least one primary sponsor.
  */
 async function validateBillSponsors(): Promise<ValidationResult> {
-  // Count bills with sponsors that reference valid legislators
-  const billsWithValidSponsors = await prisma.billSponsor.count({
+  // Count bills with at least one primary sponsor
+  const billsWithPrimarySponsors = await prisma.billSponsor.count({
     where: {
       isPrimary: true,
-      legislator: { isNot: null },
     },
   });
 
   const totalBills = await prisma.bill.count();
 
-  // At least 90% of bills should have a valid sponsor
+  // At least 90% of bills should have a primary sponsor
   const threshold = Math.floor(totalBills * 0.9);
-  const passed = billsWithValidSponsors >= threshold;
+  const passed = billsWithPrimarySponsors >= threshold;
 
   return {
     check: 'Bill Sponsor Integrity',
     passed,
     expected: `>= ${threshold} (90% of bills)`,
-    actual: billsWithValidSponsors,
+    actual: billsWithPrimarySponsors,
     message: passed
-      ? `${billsWithValidSponsors}/${totalBills} bills have valid sponsors`
-      : `Only ${billsWithValidSponsors}/${totalBills} bills have valid sponsors`,
+      ? `${billsWithPrimarySponsors}/${totalBills} bills have primary sponsors`
+      : `Only ${billsWithPrimarySponsors}/${totalBills} bills have primary sponsors`,
     severity: passed ? 'info' : 'warning',
   };
 }
 
 /**
  * Validate referential integrity: committee hierarchy
+ * Note: parentId FK constraint ensures valid references if set.
+ * We validate that subcommittees (type=SUBCOMMITTEE) have parentId set.
  */
 async function validateCommitteeHierarchy(): Promise<ValidationResult> {
-  // Count subcommittees with invalid parent references
+  // Count subcommittees without parentId (which should be set for subcommittees)
+  // For nullable fields, use `null` directly (Prisma shorthand)
   const orphanedSubcommittees = await prisma.committee.count({
     where: {
-      parentId: { not: null },
-      parent: null,
+      type: 'SUBCOMMITTEE',
+      parentId: null,
     },
+  });
+
+  // Get total subcommittees
+  const totalSubcommittees = await prisma.committee.count({
+    where: { type: 'SUBCOMMITTEE' },
   });
 
   return {
@@ -249,102 +258,103 @@ async function validateCommitteeHierarchy(): Promise<ValidationResult> {
     expected: '0 orphaned subcommittees',
     actual: orphanedSubcommittees,
     message: orphanedSubcommittees === 0
-      ? 'All subcommittees have valid parent committees'
-      : `${orphanedSubcommittees} subcommittees have invalid parent references`,
+      ? `All ${totalSubcommittees} subcommittees have parent committees`
+      : `${orphanedSubcommittees}/${totalSubcommittees} subcommittees missing parent reference`,
     severity: orphanedSubcommittees === 0 ? 'info' : 'warning',
   };
 }
 
 /**
  * Validate referential integrity: votes reference valid legislators
+ * Note: Vote.legislatorId is a required FK, so DB constraints ensure validity.
+ * We validate vote counts are reasonable (at least some votes exist).
  */
 async function validateVoteLegislators(): Promise<ValidationResult> {
-  // Count vote positions with invalid legislator references
-  const orphanedVotes = await prisma.vote.count({
-    where: {
-      legislator: null,
-    },
-  });
-
+  // Since legislatorId is required, all votes have valid legislator refs by constraint
+  // Validate that we have meaningful vote data
   const totalVotes = await prisma.vote.count();
+  const totalRollCalls = await prisma.rollCallVote.count();
 
-  // Allow up to 5% orphaned (historical legislators may not be in database)
-  const threshold = Math.floor(totalVotes * 0.95);
-  const validVotes = totalVotes - orphanedVotes;
-  const passed = validVotes >= threshold;
+  // If we have roll calls, we should have votes
+  const expectedVotesPerRollCall = 435; // Approx House members
+  const expectedMinVotes = totalRollCalls > 0 ? Math.floor(totalRollCalls * expectedVotesPerRollCall * 0.1) : 0;
+  const passed = totalVotes >= expectedMinVotes;
 
   return {
     check: 'Vote Legislator Integrity',
     passed,
-    expected: `>= ${threshold} valid votes (95%)`,
-    actual: validVotes,
+    expected: `>= ${expectedMinVotes} votes (10% of expected)`,
+    actual: totalVotes,
     message: passed
-      ? `${validVotes}/${totalVotes} votes reference valid legislators`
-      : `Only ${validVotes}/${totalVotes} votes reference valid legislators`,
+      ? `${totalVotes} votes recorded for ${totalRollCalls} roll calls`
+      : `Only ${totalVotes} votes for ${totalRollCalls} roll calls (expected ${expectedMinVotes}+)`,
     severity: passed ? 'info' : 'warning',
   };
 }
 
 /**
  * Validate referential integrity: votes reference valid roll calls
+ * Note: Vote.rollCallId is a required FK, so DB constraints ensure validity.
+ * We validate that roll calls have reasonable vote counts.
  */
 async function validateVoteRollCalls(): Promise<ValidationResult> {
-  const orphanedVotes = await prisma.vote.count({
+  // Since rollCallId is required, all votes have valid roll call refs by constraint
+  // Validate that roll calls have votes
+  const rollCallsWithVotes = await prisma.rollCallVote.count({
     where: {
-      rollCall: null,
+      individualVotes: { some: {} },
     },
   });
 
+  const totalRollCalls = await prisma.rollCallVote.count();
+  const passed = totalRollCalls === 0 || rollCallsWithVotes === totalRollCalls;
+
   return {
     check: 'Vote Roll Call Integrity',
-    passed: orphanedVotes === 0,
-    expected: '0 orphaned votes',
-    actual: orphanedVotes,
-    message: orphanedVotes === 0
-      ? 'All votes reference valid roll calls'
-      : `${orphanedVotes} votes have invalid roll call references`,
-    severity: orphanedVotes === 0 ? 'info' : 'error',
+    passed,
+    expected: `${totalRollCalls} roll calls with votes`,
+    actual: rollCallsWithVotes,
+    message: passed
+      ? `All ${totalRollCalls} roll calls have votes recorded`
+      : `${rollCallsWithVotes}/${totalRollCalls} roll calls have votes`,
+    severity: passed ? 'info' : 'error',
   };
 }
 
 /**
  * Validate data quality: bills have required fields
+ * Note: title and introducedDate are required (non-nullable) in schema,
+ * so we only check for empty strings (for title) and count total bills.
  */
 async function validateBillDataQuality(): Promise<ValidationResult[]> {
   const results: ValidationResult[] = [];
 
-  // Bills without titles
-  const billsWithoutTitle = await prisma.bill.count({
-    where: {
-      OR: [{ title: null }, { title: '' }],
-    },
+  // Bills with empty titles (title is required, so can't be null)
+  const billsWithEmptyTitle = await prisma.bill.count({
+    where: { title: '' },
   });
 
   results.push({
-    check: 'Bills with Title',
-    passed: billsWithoutTitle === 0,
-    expected: '0 bills without title',
-    actual: billsWithoutTitle,
-    message: billsWithoutTitle === 0
-      ? 'All bills have titles'
-      : `${billsWithoutTitle} bills are missing titles`,
-    severity: billsWithoutTitle === 0 ? 'info' : 'warning',
+    check: 'Bills with Non-Empty Title',
+    passed: billsWithEmptyTitle === 0,
+    expected: '0 bills with empty title',
+    actual: billsWithEmptyTitle,
+    message: billsWithEmptyTitle === 0
+      ? 'All bills have non-empty titles'
+      : `${billsWithEmptyTitle} bills have empty titles`,
+    severity: billsWithEmptyTitle === 0 ? 'info' : 'warning',
   });
 
-  // Bills without introduced date
-  const billsWithoutDate = await prisma.bill.count({
-    where: { introducedDate: null },
-  });
+  // Total bills count (introducedDate is required, can't be null)
+  const totalBills = await prisma.bill.count();
 
   results.push({
     check: 'Bills with Introduced Date',
-    passed: billsWithoutDate === 0,
-    expected: '0 bills without introduced date',
-    actual: billsWithoutDate,
-    message: billsWithoutDate === 0
-      ? 'All bills have introduced dates'
-      : `${billsWithoutDate} bills are missing introduced dates`,
-    severity: billsWithoutDate === 0 ? 'info' : 'warning',
+    passed: true, // Required field, always has value
+    expected: `${totalBills} bills (all have introducedDate by schema)`,
+    actual: totalBills,
+    message: `All ${totalBills} bills have introduced dates (required field)`,
+    severity: 'info',
   });
 
   return results;
@@ -352,49 +362,44 @@ async function validateBillDataQuality(): Promise<ValidationResult[]> {
 
 /**
  * Validate data quality: legislators have required fields
+ * Note: firstName, lastName, state are required (non-nullable) in schema,
+ * so we only check for empty strings.
  */
 async function validateLegislatorDataQuality(): Promise<ValidationResult[]> {
   const results: ValidationResult[] = [];
 
-  // Legislators without names
-  const legislatorsWithoutName = await prisma.legislator.count({
+  // Legislators with empty names (required fields, can't be null)
+  const legislatorsWithEmptyName = await prisma.legislator.count({
     where: {
-      OR: [
-        { lastName: null },
-        { lastName: '' },
-        { firstName: null },
-        { firstName: '' },
-      ],
+      OR: [{ lastName: '' }, { firstName: '' }],
     },
   });
 
   results.push({
-    check: 'Legislators with Names',
-    passed: legislatorsWithoutName === 0,
-    expected: '0 legislators without names',
-    actual: legislatorsWithoutName,
-    message: legislatorsWithoutName === 0
-      ? 'All legislators have names'
-      : `${legislatorsWithoutName} legislators are missing names`,
-    severity: legislatorsWithoutName === 0 ? 'info' : 'warning',
+    check: 'Legislators with Non-Empty Names',
+    passed: legislatorsWithEmptyName === 0,
+    expected: '0 legislators with empty names',
+    actual: legislatorsWithEmptyName,
+    message: legislatorsWithEmptyName === 0
+      ? 'All legislators have non-empty names'
+      : `${legislatorsWithEmptyName} legislators have empty names`,
+    severity: legislatorsWithEmptyName === 0 ? 'info' : 'warning',
   });
 
-  // Legislators without state
-  const legislatorsWithoutState = await prisma.legislator.count({
-    where: {
-      OR: [{ state: null }, { state: '' }],
-    },
+  // Legislators with empty state (required field, can't be null)
+  const legislatorsWithEmptyState = await prisma.legislator.count({
+    where: { state: '' },
   });
 
   results.push({
-    check: 'Legislators with State',
-    passed: legislatorsWithoutState === 0,
-    expected: '0 legislators without state',
-    actual: legislatorsWithoutState,
-    message: legislatorsWithoutState === 0
-      ? 'All legislators have states'
-      : `${legislatorsWithoutState} legislators are missing states`,
-    severity: legislatorsWithoutState === 0 ? 'info' : 'warning',
+    check: 'Legislators with Non-Empty State',
+    passed: legislatorsWithEmptyState === 0,
+    expected: '0 legislators with empty state',
+    actual: legislatorsWithEmptyState,
+    message: legislatorsWithEmptyState === 0
+      ? 'All legislators have non-empty states'
+      : `${legislatorsWithEmptyState} legislators have empty states`,
+    severity: legislatorsWithEmptyState === 0 ? 'info' : 'warning',
   });
 
   return results;
@@ -453,8 +458,9 @@ async function validatePartyDistribution(): Promise<ValidationResult> {
   });
 
   const parties = partyDistribution.map((p) => `${p.party}: ${p._count}`).join(', ');
+  // Party enum uses single letters: D (Democrat), R (Republican), I (Independent)
   const majorParties = partyDistribution.filter(
-    (p) => p.party === 'DEMOCRAT' || p.party === 'REPUBLICAN'
+    (p) => p.party === 'D' || p.party === 'R'
   );
 
   const hasMajorParties = majorParties.length === 2;
@@ -512,6 +518,31 @@ export async function validateImport(options: ImportOptions): Promise<void> {
   log('info', `Starting import validation${dryRun ? ' (DRY RUN)' : ''}`);
 
   const manager = getCheckpointManager();
+
+  // In dry-run mode, skip database validation since no data was actually written
+  if (dryRun) {
+    log('info', '');
+    log('info', '=== Validation Summary (DRY RUN) ===');
+    log('info', 'Database validation skipped - no data written in dry-run mode');
+    log('info', '');
+    log('info', 'To validate actual data, run without --dry-run flag:');
+    log('info', '  pnpm --filter @ltip/api run import:run');
+    log('info', '');
+
+    // Update checkpoint
+    manager.update({
+      recordsProcessed: 0,
+      totalExpected: 0,
+      metadata: {
+        dryRun: true,
+        skipped: true,
+        durationMs: Date.now() - startTime,
+      },
+    });
+
+    log('info', '✓ Validation phase completed (dry-run mode)');
+    return;
+  }
 
   // Initialize stats
   const stats: ValidationStats = {

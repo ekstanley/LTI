@@ -18,7 +18,6 @@
 import {
   getCongressClient,
   transformBillListItem,
-  type BillListItem,
 } from '../src/ingestion/index.js';
 import { prisma } from '../src/db/client.js';
 import { getCheckpointManager } from './checkpoint-manager.js';
@@ -127,21 +126,11 @@ async function upsertBillBatch(
   let skipped = 0;
 
   // Process bills individually to handle errors gracefully
+  // Note: Sponsor info is not available in the bill list API response.
+  // Sponsor relationships must be created via a separate import-cosponsors phase
+  // that fetches bill details with sponsor data.
   for (const bill of bills) {
     try {
-      // Check if sponsor exists before creating bill
-      // Skip sponsor validation if sponsorId is null
-      if (bill.sponsorId) {
-        const sponsorExists = await prisma.legislator.findUnique({
-          where: { id: bill.sponsorId },
-          select: { id: true },
-        });
-        if (!sponsorExists) {
-          // Sponsor not imported yet, clear the reference
-          bill.sponsorId = null;
-        }
-      }
-
       // Check if bill exists
       const existing = await prisma.bill.findUnique({
         where: { id: bill.id },
@@ -149,12 +138,11 @@ async function upsertBillBatch(
       });
 
       if (existing) {
-        // Update existing bill
+        // Update existing bill with fields from list API
         await prisma.bill.update({
           where: { id: bill.id },
           data: {
             title: bill.title,
-            shortTitle: bill.shortTitle,
             status: bill.status,
             introducedDate: bill.introducedDate,
             lastActionDate: bill.lastActionDate,
@@ -165,28 +153,10 @@ async function upsertBillBatch(
         updated++;
       } else {
         // Create new bill
-        // Remove sponsorId from create data - use BillSponsor relation instead
-        const { sponsorId, ...createData } = bill;
         await prisma.bill.create({
-          data: createData,
+          data: bill,
         });
         created++;
-
-        // Create sponsor relationship if we have a sponsor
-        if (sponsorId) {
-          try {
-            await prisma.billSponsor.create({
-              data: {
-                billId: bill.id,
-                legislatorId: sponsorId,
-                isPrimary: true,
-              },
-            });
-          } catch {
-            // Sponsor relation may already exist or sponsor not found
-            log('debug', `Could not create sponsor relation for bill ${bill.id}`);
-          }
-        }
       }
     } catch (error) {
       log('debug', `Failed to upsert bill ${bill.id}: ${error}`);

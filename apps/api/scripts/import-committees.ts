@@ -110,6 +110,8 @@ async function upsertCommittee(
 
     if (existing) {
       // Update existing committee
+      // Note: jurisdiction is not available in Congress.gov committee list API
+      // It would need to be populated from a separate data source
       await prisma.committee.update({
         where: { id: committee.id },
         data: {
@@ -117,7 +119,6 @@ async function upsertCommittee(
           chamber: createData.chamber,
           type: createData.type,
           parentId: createData.parentId,
-          jurisdiction: createData.jurisdiction,
         },
       });
       return { created: false, updated: true, skipped: false };
@@ -229,6 +230,8 @@ export async function importCommittees(options: ImportOptions): Promise<void> {
 
     for (let i = 0; i < sortedCommittees.length; i++) {
       const committee = sortedCommittees[i];
+      // TypeScript requires explicit check even though index is within bounds
+      if (!committee) continue;
 
       // Skip already processed (for resume)
       if (i < startOffset) {

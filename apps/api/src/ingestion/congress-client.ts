@@ -119,7 +119,9 @@ export class CongressApiClient {
     await this.rateLimiter.acquire();
 
     // Build URL with query params
-    const url = new URL(endpoint, this.baseUrl);
+    // Note: URL constructor replaces base path when endpoint starts with /
+    // So we concatenate manually to preserve the /v3 path segment
+    const url = new URL(`${this.baseUrl}${endpoint}`);
 
     // Add API key if available
     if (this.apiKey) {

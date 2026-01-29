@@ -69,7 +69,8 @@ function parseCliArgs(): CliArgs {
     strict: true,
   });
 
-  return {
+  // With exactOptionalPropertyTypes, only include phase when defined
+  const args: CliArgs = {
     help: values.help ?? false,
     dryRun: values['dry-run'] ?? false,
     resume: values.resume ?? false,
@@ -77,8 +78,11 @@ function parseCliArgs(): CliArgs {
     reset: values.reset ?? false,
     force: values.force ?? false,
     verbose: values.verbose ?? false,
-    phase: values.phase,
   };
+  if (values.phase !== undefined) {
+    args.phase = values.phase;
+  }
+  return args;
 }
 
 function printHelp(): void {
@@ -220,8 +224,25 @@ async function executePhase(phase: ImportPhase, options: ImportOptions): Promise
 
   console.log(`\n--- Phase: ${phase} ---\n`);
 
-  // Update checkpoint to current phase
-  manager.update({ phase, lastError: null });
+  // Check if we're resuming the same phase or starting a new one
+  // WP7-A-001 FIX: Reset offset when transitioning to a new phase
+  const isResumingSamePhase = state.phase === phase && state.recordsProcessed > 0;
+
+  if (isResumingSamePhase) {
+    // Resuming same phase - keep offset/recordsProcessed, just clear error
+    manager.update({ lastError: null });
+  } else {
+    // Starting a new phase - reset all progress counters to avoid offset leakage
+    manager.update({
+      phase,
+      lastError: null,
+      offset: 0,
+      recordsProcessed: 0,
+      congress: null,
+      billType: null,
+      totalExpected: 0,
+    });
+  }
 
   try {
     // Get and execute importer

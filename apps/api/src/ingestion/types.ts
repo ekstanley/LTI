@@ -23,12 +23,20 @@ export type Pagination = z.infer<typeof PaginationSchema>;
 // Bill Types
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const CongressBillTypeSchema = z.enum([
+// Base enum with lowercase values (our internal representation)
+const BillTypeEnum = z.enum([
   'hr', 'hres', 'hjres', 'hconres',
   's', 'sres', 'sjres', 'sconres',
 ]);
 
-export type CongressBillType = z.infer<typeof CongressBillTypeSchema>;
+// Schema that accepts both uppercase (from API) and lowercase
+// and normalizes to lowercase for internal use
+export const CongressBillTypeSchema = z
+  .string()
+  .transform((val) => val.toLowerCase())
+  .pipe(BillTypeEnum);
+
+export type CongressBillType = z.infer<typeof BillTypeEnum>;
 
 export const BillActionSchema = z.object({
   actionCode: z.string().nullable().optional(),
@@ -121,9 +129,9 @@ export const BillCommitteeSchema = z.object({
 export type BillCommittee = z.infer<typeof BillCommitteeSchema>;
 
 export const BillListItemSchema = z.object({
-  congress: z.number(),
+  congress: z.coerce.number(),
   type: CongressBillTypeSchema,
-  number: z.number(),
+  number: z.coerce.number(), // API may return string
   originChamber: z.string().nullable().optional(),
   originChamberCode: z.string().nullable().optional(),
   title: z.string(),
@@ -139,9 +147,9 @@ export const BillListItemSchema = z.object({
 export type BillListItem = z.infer<typeof BillListItemSchema>;
 
 export const BillDetailSchema = z.object({
-  congress: z.number(),
+  congress: z.coerce.number(),
   type: CongressBillTypeSchema,
-  number: z.number(),
+  number: z.coerce.number(), // API may return string
   originChamber: z.string().nullable().optional(),
   originChamberCode: z.string().nullable().optional(),
   title: z.string(),
