@@ -122,6 +122,28 @@ export const RETRY_CONFIG = {
 } as const;
 
 // =============================================================================
+// ERROR HANDLING LIMITS (QC-001 FIX)
+// =============================================================================
+
+/**
+ * Error handling limits to prevent infinite loops.
+ * Added for QC-001: Infinite Loop Risk in Error Handling.
+ */
+export const ERROR_LIMITS = {
+  /**
+   * Maximum total errors allowed across entire import process.
+   * Prevents infinite loops regardless of error pattern.
+   */
+  maxTotalErrors: 100,
+
+  /**
+   * Maximum duration for import operations in milliseconds.
+   * 3600000ms = 1 hour timeout.
+   */
+  maxDurationMs: 3600000,
+} as const;
+
+// =============================================================================
 // TIMEOUT CONFIGURATION
 // =============================================================================
 

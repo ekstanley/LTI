@@ -32,6 +32,7 @@ import {
   ESTIMATED_COUNTS,
   DRY_RUN_CONFIG,
   LOG_CONFIG,
+  ERROR_LIMITS,
   type ImportOptions,
   type TargetCongress,
 } from './import-config.js';
@@ -132,6 +133,7 @@ interface ImportStats {
   positionsUpdated: number;
   positionsSkipped: number;
   errors: string[];
+  totalErrors: number; // QC-001: Track total errors to prevent infinite loops
   byCongressChamber: Map<string, {
     rollCalls: number;
     positions: number;
@@ -227,7 +229,12 @@ async function* listVotes(
   congress: number,
   chamber: ChamberKey,
   session: number,
-  options: { limit?: number; offset?: number } = {}
+  options: {
+    limit?: number;
+    offset?: number;
+    totalErrors: { count: number }; // QC-001: Mutable reference for total error tracking
+    startTime: number; // QC-001: Import start time for duration check
+  }
 ): AsyncGenerator<CongressVoteListItem, void, unknown> {
   const limit = options.limit ?? BATCH_SIZES.votes;
   let offset = options.offset ?? 0;
@@ -235,6 +242,15 @@ async function* listVotes(
   const MAX_CONSECUTIVE_ERRORS = 3;
 
   while (true) {
+    // QC-001: Check duration limit to prevent infinite loops
+    const elapsed = Date.now() - options.startTime;
+    if (elapsed > ERROR_LIMITS.maxDurationMs) {
+      log('error',
+        `Stopping votes pagination after ${Math.round(elapsed / 60000)} minutes ` +
+        `(exceeds maximum duration of ${ERROR_LIMITS.maxDurationMs / 60000} minutes)`
+      );
+      break;
+    }
     // Congress.gov API requires session in path: /{chamber}-vote/{congress}/{session}
     const endpoint = `/${chamber}-vote/${congress}/${session}`;
     const url = buildApiUrl(endpoint, {
@@ -259,9 +275,21 @@ async function* listVotes(
         break;
       }
 
+      // QC-001: Increment total errors counter (never reset)
+      options.totalErrors.count++;
+
+      // QC-001: Check total errors limit
+      if (options.totalErrors.count >= ERROR_LIMITS.maxTotalErrors) {
+        log('error',
+          `Stopping votes pagination after ${ERROR_LIMITS.maxTotalErrors} total errors ` +
+          `(maximum error limit reached). Manual investigation required.`
+        );
+        break;
+      }
+
       // Track consecutive errors at the SAME offset (WP7-A-005 FIX: prevent data loss)
       consecutiveErrors++;
-      log('warn', `Failed to fetch votes at offset ${offset} (attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}): ${errorMsg}`);
+      log('warn', `Failed to fetch votes at offset ${offset} (attempt ${consecutiveErrors}/${MAX_CONSECUTIVE_ERRORS}, total errors: ${options.totalErrors.count}): ${errorMsg}`);
 
       if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
         // After max retries at the same offset, this is a persistent error
@@ -566,7 +594,7 @@ async function upsertRollCallVote(
     await prisma.rollCallVote.create({ data: vote });
     return { created: true, updated: false, skipped: false };
   } catch (error) {
-    log('debug', `Failed to upsert roll call ${vote.id}: ${error}`);
+    log('error', `Failed to upsert roll call ${vote.id}: ${error}`);
     return { created: false, updated: false, skipped: true };
   }
 }
@@ -639,7 +667,7 @@ async function upsertVotePositions(
           created++;
         }
       } catch (error) {
-        log('debug', `Failed to upsert vote position for ${member.bioguideId}: ${error}`);
+        log('error', `Failed to upsert vote position for ${member.bioguideId}: ${error}`);
         skipped++;
       }
     }
@@ -768,6 +796,7 @@ export async function importVotes(options: ImportOptions): Promise<void> {
     positionsUpdated: 0,
     positionsSkipped: 0,
     errors: [],
+    totalErrors: 0, // QC-001: Track total errors across entire import
     byCongressChamber: new Map(),
   };
 
@@ -833,7 +862,16 @@ export async function importVotes(options: ImportOptions): Promise<void> {
           // Fetch roll call votes for this congress/chamber/session
           let rollCallCount = 0;
 
-          for await (const voteListItem of listVotes(congress, chamber, session, { offset })) {
+          // QC-001: Create mutable reference for total errors tracking
+          const totalErrorsRef = { count: stats.totalErrors };
+
+          for await (const voteListItem of listVotes(congress, chamber, session, {
+            offset,
+            totalErrors: totalErrorsRef,
+            startTime,
+          })) {
+            // QC-001: Sync totalErrors back to stats
+            stats.totalErrors = totalErrorsRef.count;
             rollCallCount++;
 
             // Fetch detailed vote information
@@ -942,6 +980,7 @@ export async function importVotes(options: ImportOptions): Promise<void> {
     log('info', `Positions Skipped: ${stats.positionsSkipped}`);
     log('info', '');
     log('info', `Errors: ${stats.errors.length}`);
+    log('info', `Total Errors (QC-001): ${stats.totalErrors}`); // QC-001: Report total errors
     log('info', `Duration: ${durationStr}`);
     log('info', `Rate: ${Math.round(stats.rollCallsProcessed / (duration / 1000))} roll calls/sec`);
 
@@ -978,6 +1017,7 @@ export async function importVotes(options: ImportOptions): Promise<void> {
         positionsUpdated: stats.positionsUpdated,
         positionsSkipped: stats.positionsSkipped,
         errors: stats.errors.length,
+        totalErrors: stats.totalErrors, // QC-001: Include total errors in checkpoint
         durationMs: duration,
       },
     });
