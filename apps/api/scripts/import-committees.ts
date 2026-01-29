@@ -29,6 +29,7 @@ interface ImportStats {
   updated: number;
   skipped: number;
   errors: string[];
+  failedTransformIds: string[];
 }
 
 type CommitteeInput = ReturnType<typeof transformCommittee>;
@@ -165,6 +166,7 @@ export async function importCommittees(options: ImportOptions): Promise<void> {
     updated: 0,
     skipped: 0,
     errors: [],
+    failedTransformIds: [],
   };
 
   // Get checkpoint state for resume
@@ -207,6 +209,7 @@ export async function importCommittees(options: ImportOptions): Promise<void> {
         const msg = `Failed to transform committee ${committeeItem.systemCode}: ${error}`;
         log('warn', msg);
         stats.errors.push(msg);
+        stats.failedTransformIds.push(committeeItem.systemCode);
       }
 
       // Progress during fetch
@@ -293,7 +296,7 @@ export async function importCommittees(options: ImportOptions): Promise<void> {
             }
           }
         } catch (error) {
-          log('debug', `Could not update parent link for ${committee.id}: ${error}`);
+          log('error', `Could not update parent link for ${committee.id}: ${error}`);
         }
       }
     }
@@ -313,8 +316,13 @@ export async function importCommittees(options: ImportOptions): Promise<void> {
     log('info', `Updated: ${stats.updated}`);
     log('info', `Skipped: ${stats.skipped}`);
     log('info', `Errors: ${stats.errors.length}`);
+    log('info', `Failed transformations: ${stats.failedTransformIds.length}`);
     log('info', `Duration: ${durationStr}`);
     log('info', `Rate: ${Math.round(stats.processed / (duration / 1000))} records/sec`);
+
+    if (stats.failedTransformIds.length > 0) {
+      log('warn', `${stats.failedTransformIds.length} records failed transformation: [${stats.failedTransformIds.join(', ')}]`);
+    }
 
     if (stats.errors.length > 0 && verbose) {
       log('warn', 'Errors encountered:');
@@ -333,6 +341,7 @@ export async function importCommittees(options: ImportOptions): Promise<void> {
         updated: stats.updated,
         skipped: stats.skipped,
         errors: stats.errors.length,
+        failedTransforms: stats.failedTransformIds.length,
         durationMs: duration,
         updatedParentLinks,
       },

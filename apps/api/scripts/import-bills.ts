@@ -44,6 +44,7 @@ interface ImportStats {
   updated: number;
   skipped: number;
   errors: string[];
+  failedTransformIds: string[];
   byCongressType: Map<string, { processed: number; created: number; updated: number }>;
 }
 
@@ -159,7 +160,7 @@ async function upsertBillBatch(
         created++;
       }
     } catch (error) {
-      log('debug', `Failed to upsert bill ${bill.id}: ${error}`);
+      log('error', `Failed to upsert bill ${bill.id}: ${error}`);
       skipped++;
     }
   }
@@ -268,6 +269,7 @@ export async function importBills(options: ImportOptions): Promise<void> {
     updated: 0,
     skipped: 0,
     errors: [],
+    failedTransformIds: [],
     byCongressType: new Map(),
   };
 
@@ -353,9 +355,11 @@ export async function importBills(options: ImportOptions): Promise<void> {
             try {
               transformedBatch.push(transformBillListItem(bill));
             } catch (error) {
-              const msg = `Failed to transform bill ${bill.type}-${bill.number}-${bill.congress}: ${error}`;
+              const billId = `${bill.type}-${bill.number}-${bill.congress}`;
+              const msg = `Failed to transform bill ${billId}: ${error}`;
               log('warn', msg);
               stats.errors.push(msg);
+              stats.failedTransformIds.push(billId);
             }
           }
 
@@ -438,8 +442,13 @@ export async function importBills(options: ImportOptions): Promise<void> {
     log('info', `Updated: ${stats.updated}`);
     log('info', `Skipped: ${stats.skipped}`);
     log('info', `Errors: ${stats.errors.length}`);
+    log('info', `Failed transformations: ${stats.failedTransformIds.length}`);
     log('info', `Duration: ${durationStr}`);
     log('info', `Rate: ${Math.round(stats.processed / (duration / 1000))} records/sec`);
+
+    if (stats.failedTransformIds.length > 0) {
+      log('warn', `${stats.failedTransformIds.length} records failed transformation: [${stats.failedTransformIds.join(', ')}]`);
+    }
 
     // Breakdown by congress/type
     if (verbose) {
@@ -471,6 +480,7 @@ export async function importBills(options: ImportOptions): Promise<void> {
         updated: stats.updated,
         skipped: stats.skipped,
         errors: stats.errors.length,
+        failedTransforms: stats.failedTransformIds.length,
         durationMs: duration,
       },
     });

@@ -30,6 +30,7 @@ interface ImportStats {
   updated: number;
   skipped: number;
   errors: string[];
+  failedTransformIds: string[];
 }
 
 // =============================================================================
@@ -174,6 +175,7 @@ export async function importLegislators(options: ImportOptions): Promise<void> {
     updated: 0,
     skipped: 0,
     errors: [],
+    failedTransformIds: [],
   };
 
   // Get checkpoint state for resume
@@ -219,6 +221,7 @@ export async function importLegislators(options: ImportOptions): Promise<void> {
           const msg = `Failed to transform member ${member.bioguideId}: ${error}`;
           log('warn', msg);
           stats.errors.push(msg);
+          stats.failedTransformIds.push(member.bioguideId);
           return null;
         }
       }).filter((item): item is NonNullable<typeof item> => item !== null);
@@ -276,7 +279,9 @@ export async function importLegislators(options: ImportOptions): Promise<void> {
           try {
             return transformMemberListItem(member);
           } catch (error) {
-            stats.errors.push(`Failed to transform historical member ${member.bioguideId}: ${error}`);
+            const msg = `Failed to transform historical member ${member.bioguideId}: ${error}`;
+            stats.errors.push(msg);
+            stats.failedTransformIds.push(member.bioguideId);
             return null;
           }
         }).filter((item): item is NonNullable<typeof item> => item !== null);
@@ -314,8 +319,13 @@ export async function importLegislators(options: ImportOptions): Promise<void> {
     log('info', `Updated: ${stats.updated}`);
     log('info', `Skipped: ${stats.skipped}`);
     log('info', `Errors: ${stats.errors.length}`);
+    log('info', `Failed transformations: ${stats.failedTransformIds.length}`);
     log('info', `Duration: ${durationStr}`);
     log('info', `Rate: ${Math.round(stats.processed / (duration / 1000))} records/sec`);
+
+    if (stats.failedTransformIds.length > 0) {
+      log('warn', `${stats.failedTransformIds.length} records failed transformation: [${stats.failedTransformIds.join(', ')}]`);
+    }
 
     if (stats.errors.length > 0 && verbose) {
       log('warn', 'Errors encountered:');
@@ -333,6 +343,7 @@ export async function importLegislators(options: ImportOptions): Promise<void> {
         created: stats.created,
         updated: stats.updated,
         errors: stats.errors.length,
+        failedTransforms: stats.failedTransformIds.length,
         durationMs: duration,
       },
     });
