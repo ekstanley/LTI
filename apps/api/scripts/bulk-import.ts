@@ -23,6 +23,11 @@
  * @module scripts/bulk-import
  */
 
+// Load environment variables from repository root
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
+loadEnv({ path: resolve(import.meta.dirname, '../../../.env') });
+
 import { parseArgs } from 'util';
 import {
   IMPORT_PHASES,
