@@ -7,7 +7,7 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import { Search, X } from 'lucide-react';
-import { useBills } from '@/hooks';
+import { useBills, useDebounce } from '@/hooks';
 import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
 import { BillCard } from '@/components/bills';
 import type { BillsQueryParams } from '@/lib/api';
@@ -32,6 +32,9 @@ export function BillsPageClient() {
   });
   const [page, setPage] = useState(1);
 
+  // Debounce search to prevent excessive API calls
+  const debouncedSearch = useDebounce(filters.search, 300);
+
   // Build query params
   const queryParams = useMemo<BillsQueryParams>(() => {
     const params: BillsQueryParams = {
@@ -39,8 +42,8 @@ export function BillsPageClient() {
       offset: (page - 1) * PAGE_SIZE,
     };
 
-    if (filters.search.trim()) {
-      params.search = filters.search.trim();
+    if (debouncedSearch.trim()) {
+      params.search = debouncedSearch.trim();
     }
     if (filters.chamber) {
       params.chamber = filters.chamber;
@@ -50,7 +53,7 @@ export function BillsPageClient() {
     }
 
     return params;
-  }, [filters, page]);
+  }, [debouncedSearch, filters.chamber, filters.status, page]);
 
   // Fetch bills
   const { bills, pagination, isLoading, error, mutate } = useBills(queryParams);
