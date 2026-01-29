@@ -1,8 +1,8 @@
 # Change Control Process
 
 **Project**: LTIP (Legislative Tracking Intelligence Platform)
-**Version**: 1.0.0
-**Last Updated**: 2026-01-28
+**Version**: 1.3.0
+**Last Updated**: 2026-01-29
 
 ---
 
@@ -279,9 +279,111 @@ Quality control fixes for the WP7-A Historical Data Load system to address error
 
 ---
 
+### CR-2026-01-29-002: WP6-R Frontend Completion
+
+**Status**: Implemented
+**Category**: 2 (Standard Change)
+**Priority**: High
+
+#### Timeline
+- Requested: 2026-01-29
+- Reviewed: 2026-01-29
+- Approved: 2026-01-29
+- Implemented: 2026-01-29
+- Closed: Pending (awaiting API integration test)
+
+#### Description
+Complete the WP6-R Frontend MVP work package to connect existing UI scaffolding to the real backend API. This is the final remaining work package for Phase 1 MVP completion.
+
+#### Justification
+Phase 1 is 91% complete. All backend infrastructure (WP1-WP5, WP7-A) is finished. WP6-R frontend completion is required to achieve Phase 1 MVP exit criteria.
+
+#### Impact Assessment
+- **Scope Impact**: None (within approved Phase 1 scope)
+- **Timeline Impact**: Low (1-2 days estimated)
+- **Budget Impact**: None
+- **Risk Level**: Low
+
+#### Affected Components
+- [x] Frontend
+- [ ] Backend API
+- [ ] Database
+- [ ] ML Pipeline
+- [ ] Infrastructure
+- [x] Documentation
+
+#### Dependencies
+- WP1-WP5 backend infrastructure (COMPLETE)
+- WP7-A historical data load infrastructure (COMPLETE)
+- Backend API endpoints operational
+
+#### Deliverables
+
+| ID | Deliverable | Status | Notes |
+|----|-------------|--------|-------|
+| WP6R-T1 | Project infrastructure | COMPLETE | `apps/web/src/hooks/` with barrel exports |
+| WP6R-T2 | useBills hook | COMPLETE | SWR hook with pagination, filtering, search |
+| WP6R-T3 | useLegislators hook | COMPLETE | SWR hook with search, party, state filters |
+| WP6R-T4 | Bills page real API | COMPLETE | Connected to `/api/v1/bills` endpoint |
+| WP6R-T5 | Bill detail page | STUB | Route `/bills/[id]` placeholder created |
+| WP6R-T6 | Legislators list page | STUB | Route `/legislators` placeholder created |
+| WP6R-T7 | Legislator detail page | STUB | Route `/legislators/[id]` placeholder created |
+| WP6R-T8 | Live votes dashboard | STUB | Route `/votes` placeholder created |
+| WP6R-T9 | Navigation component | COMPLETE | Global nav with active state indicators |
+| WP6R-T10 | Integration testing | PARTIAL | Build passes, types verified, screenshot captured |
+
+#### Implementation Details
+
+**Hooks Infrastructure (`apps/web/src/hooks/`)**:
+- `useBills.ts` - Fetches paginated bills with search/filter params
+- `useLegislators.ts` - Fetches paginated legislators with search/filter params
+- `useVotes.ts` - Fetches paginated votes with filter params
+- `index.ts` - Barrel export for all hooks
+
+**Type Fixes**:
+- Fixed PaginatedResponse access pattern: `data?.pagination ?? null` instead of constructing from non-existent properties
+- Fixed shared package ESM imports by removing `.js` extensions for `transpilePackages` compatibility
+
+**Page Stubs Created** (for Next.js typedRoutes):
+- `/app/legislators/page.tsx`
+- `/app/legislators/[id]/page.tsx`
+- `/app/bills/[id]/page.tsx`
+- `/app/votes/page.tsx`
+- `/app/about/page.tsx`
+- `/app/privacy/page.tsx`
+
+**Common UI Components** (`apps/web/src/components/common/`):
+- `ErrorBoundary.tsx` - React error boundary with fallback UI
+- `LoadingState.tsx` - Spinner with customizable message
+- `EmptyState.tsx` - Empty state with icon and action button
+- `Pagination.tsx` - Page navigation with prev/next buttons
+- ErrorState integrated into BillsPageClient
+
+#### Verification Results
+- TypeScript: 0 errors
+- Build: 9 routes generated successfully
+- Server: Responds on port 3001
+- Screenshot: Bills page with error state captured (API offline)
+- Navigation: All links functional with active state
+
+#### Rollback Plan
+- Revert to mock data implementation if API integration fails
+- Feature flags for gradual rollout if needed
+
+#### Detailed Plan
+See: `docs/plans/2026-01-29-wp6r-frontend-completion.md`
+
+#### Remaining Work
+- T5-T8: Implement full page content (currently stubs)
+- Full integration test with live API
+
+---
+
 ## Document Control
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.3.0 | 2026-01-29 | ODIN | Updated CR-2026-01-29-002: WP6R-T1 through T4 implemented |
+| 1.2.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-002 (WP6-R Frontend Completion) |
 | 1.1.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-001 (WP7-A QC Fixes) |
 | 1.0.0 | 2026-01-28 | ODIN | Initial version |
