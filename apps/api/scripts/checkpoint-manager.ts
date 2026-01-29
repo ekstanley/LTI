@@ -9,6 +9,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { z } from 'zod';
 import { CHECKPOINT_CONFIG, IMPORT_PHASES, type ImportPhase } from './import-config.js';
 
 // =============================================================================
@@ -100,6 +101,29 @@ export interface CheckpointUpdateOptions {
 }
 
 // =============================================================================
+// VALIDATION SCHEMAS
+// =============================================================================
+
+/**
+ * Zod schema for runtime validation of CheckpointState.
+ * Ensures checkpoint data loaded from disk matches expected structure.
+ */
+const CheckpointStateSchema = z.object({
+  phase: z.enum(['legislators', 'committees', 'bills', 'votes', 'validate']),
+  congress: z.number().nullable(),
+  offset: z.number(),
+  billType: z.string().nullable(),
+  recordsProcessed: z.number(),
+  totalExpected: z.number(),
+  timestamp: z.string(),
+  importStartedAt: z.string(),
+  metadata: z.record(z.unknown()),
+  completedPhases: z.array(z.enum(['legislators', 'committees', 'bills', 'votes', 'validate'])),
+  lastError: z.string().nullable(),
+  runId: z.string(),
+});
+
+// =============================================================================
 // CHECKPOINT MANAGER CLASS
 // =============================================================================
 
@@ -179,8 +203,22 @@ export class CheckpointManager {
     if (fs.existsSync(this.checkpointPath)) {
       try {
         const data = fs.readFileSync(this.checkpointPath, 'utf-8');
-        this.state = JSON.parse(data) as CheckpointState;
-        return this.state;
+        const parsed = JSON.parse(data);
+
+        // Validate checkpoint structure before assigning
+        const validationResult = CheckpointStateSchema.safeParse(parsed);
+
+        if (validationResult.success) {
+          this.state = validationResult.data;
+          return this.state;
+        } else {
+          // Log specific validation failures
+          console.error('Main checkpoint validation failed:');
+          validationResult.error.errors.forEach((err) => {
+            console.error(`  - Field "${err.path.join('.')}": ${err.message}`);
+          });
+          console.warn('Attempting to load from backup checkpoint...');
+        }
       } catch (error) {
         console.warn(`Failed to load main checkpoint: ${error}`);
       }
@@ -190,9 +228,23 @@ export class CheckpointManager {
     if (fs.existsSync(this.backupPath)) {
       try {
         const data = fs.readFileSync(this.backupPath, 'utf-8');
-        this.state = JSON.parse(data) as CheckpointState;
-        console.info('Loaded from backup checkpoint');
-        return this.state;
+        const parsed = JSON.parse(data);
+
+        // Validate backup checkpoint structure
+        const validationResult = CheckpointStateSchema.safeParse(parsed);
+
+        if (validationResult.success) {
+          this.state = validationResult.data;
+          console.info('Loaded from backup checkpoint');
+          return this.state;
+        } else {
+          // Log specific validation failures for backup
+          console.error('Backup checkpoint validation failed:');
+          validationResult.error.errors.forEach((err) => {
+            console.error(`  - Field "${err.path.join('.')}": ${err.message}`);
+          });
+          console.error('Both main and backup checkpoints are invalid. Starting fresh.');
+        }
       } catch (error) {
         console.warn(`Failed to load backup checkpoint: ${error}`);
       }
