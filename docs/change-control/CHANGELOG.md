@@ -60,16 +60,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Performance tuning recommendations
     - Recovery and resumption procedures
 
+### Fixed
+- **Votes Import (import-votes.ts)**:
+  - Changed to House-only import (Congress.gov API does not provide Senate votes)
+  - Added `TODO` comment noting Senate votes require separate scraping solution
+  - Fixed 404 handling in `listVotes` to break on end-of-data instead of infinite retry loop
+- **Validate Phase (validate-import.ts)**:
+  - Skip database validation checks in dry-run mode (no DB to validate)
+  - Only run count and integrity checks when `dryRun: false`
+
+### Documentation
+- **Gap Analysis (`docs/WP7-A-GAP-ANALYSIS.md`)**:
+  - Comprehensive assessment of WP7-A vs MASTER_SPECIFICATION requirements
+  - Current coverage: ~35% of data sources, ~50% of Congress.gov API features
+  - Missing features identified: Senate votes, cosponsors, actions, amendments, subjects
+  - Data model alignment table showing 6/20 Prisma models populated
+  - Infrastructure gaps: no scheduler, no incremental sync, full-sync only
+  - Prioritized improvement tasks with risk assessment
+- **Improvement Tasks (`docs/WP7-IMPROVEMENT-TASKS.md`)**:
+  - 12 structured tasks with ODIN criteria (ID, Priority, Effort, Status)
+  - P0 Critical: Seed Congress, Import Cosponsors, Import Bill Actions
+  - P1 High: Subjects, Committee Memberships, Incremental Sync, Senate Votes
+  - P2 Medium: Text Versions, Amendments, Enhanced Legislators
+  - P3 Low: CBO Scores, Committee Referrals
+  - Implementation sequence with phase dependencies
+  - Success metrics table (target: 90% API coverage, 16/20 models populated)
+
 ### Technical Details
 - **Test Coverage**: 37 new unit tests for checkpoint-manager (all passing)
 - **Pattern**: AsyncGenerator for memory-efficient streaming
 - **Rate Limiting**: Token bucket with 1000 req/hour limit
 - **Resumability**: Checkpoint saved every 100 records and 30 seconds
-- **Data Volume**: ~20,000 bills, ~550 legislators, ~280 committees, ~900,000 vote positions
+- **Data Volume**: ~20,000 bills, ~550 legislators, ~280 committees, ~900,000 vote positions (House only)
 - **Estimated Duration**: 4-8 hours for full import
+- **Known Limitation**: Senate votes not available via Congress.gov API
 
 ### Changed
 - Removed WP7-A from Unreleased/Planned section (completed)
+- Votes import limited to House chamber (Senate requires scraping)
 
 ---
 
