@@ -257,6 +257,16 @@ export const IMPORT_PHASES = [
 export type ImportPhase = (typeof IMPORT_PHASES)[number];
 
 /**
+ * Type guard to validate if a string is a valid ImportPhase.
+ * Use this instead of type assertions for runtime safety.
+ * @param value - The string to validate
+ * @returns true if value is a valid ImportPhase, with type narrowing
+ */
+export function isValidImportPhase(value: string): value is ImportPhase {
+  return (IMPORT_PHASES as readonly string[]).includes(value);
+}
+
+/**
  * Phase dependencies map.
  * Each phase lists its required predecessor phases.
  */

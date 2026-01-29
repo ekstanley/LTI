@@ -256,6 +256,8 @@ Quality control fixes for the WP7-A Historical Data Load system to address error
 | WP7-A-005 | Data loss on transient errors | Retry same offset, track consecutive errors | `import-votes.ts:262-275` |
 | QC-001 | Infinite loop risk | Total error limit (100) stops import | `import-config.ts`, `import-votes.ts:277-286` |
 | QC-003 | Stale compiled .js files | `scripts:clean` command, hooked into import scripts | `package.json` |
+| QC-004 | Type assertion before validation | Type guard `isValidImportPhase()` for safe narrowing | `import-config.ts:265-267`, `bulk-import.ts:37,398-405` |
+| SF-003 | Health check swallows errors silently | Log with category (rate_limited/auth/network/server) | `congress-client.ts:514-533` |
 
 #### Affected Components
 - [x] Backend API

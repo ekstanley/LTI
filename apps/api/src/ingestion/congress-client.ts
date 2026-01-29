@@ -511,7 +511,27 @@ export class CongressApiClient {
       // Try to get a single bill from the most recent congress
       await this.getBills(118, { limit: 1 });
       return true;
-    } catch {
+    } catch (error) {
+      // SF-003 FIX: Log health check failures for observability
+      const errorMsg = error instanceof Error ? error.message : String(error);
+
+      // Categorize error for better observability
+      let category = 'unknown';
+      if (errorMsg.includes('429') || errorMsg.includes('rate limit')) {
+        category = 'rate_limited';
+      } else if (errorMsg.includes('401') || errorMsg.includes('403')) {
+        category = 'auth_error';
+      } else if (errorMsg.includes('ECONNREFUSED') || errorMsg.includes('ETIMEDOUT')) {
+        category = 'network_error';
+      } else if (errorMsg.includes('500') || errorMsg.includes('502') || errorMsg.includes('503')) {
+        category = 'server_error';
+      }
+
+      logger.warn(
+        { category, error: errorMsg },
+        'Congress API health check failed'
+      );
+
       return false;
     }
   }

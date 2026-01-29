@@ -34,6 +34,7 @@ import {
   PHASE_DEPENDENCIES,
   validateEnvironment,
   getConfigSummary,
+  isValidImportPhase,
   type ImportPhase,
   type ImportOptions,
 } from './import-config.js';
@@ -394,13 +395,14 @@ async function main(): Promise<void> {
   try {
     // Execute specific phase or all phases
     if (args.phase) {
-      const phase = args.phase as ImportPhase;
-      if (!IMPORT_PHASES.includes(phase)) {
+      // QC-003 FIX: Validate BEFORE type narrowing using type guard
+      if (!isValidImportPhase(args.phase)) {
         console.error(`Invalid phase: ${args.phase}`);
         console.error(`Valid phases: ${IMPORT_PHASES.join(', ')}`);
         process.exit(1);
       }
-      await executePhase(phase, options);
+      // Type guard narrows args.phase to ImportPhase here
+      await executePhase(args.phase, options);
     } else {
       await executeAllPhases(options);
     }
