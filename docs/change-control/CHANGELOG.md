@@ -11,11 +11,65 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Planned
 - **WP6-R (Frontend Completion)**: Connect bills page to API, add legislators/votes pages
-- **WP7-A (Historical Data Load)**: Bulk import Congress 118-119 data
 - Authentication and authorization (JWT/OAuth)
 - ML pipeline with BART, BERT, XGBoost (Phase 2)
 - Neo4j influence network visualization (Phase 3)
 - Kubernetes multi-region deployment (Phase 3)
+
+---
+
+## [0.7.0] - 2026-01-28
+
+### Added
+- **WP7-A Historical Data Load (apps/api/scripts)**:
+  - **Bulk Import CLI (`bulk-import.ts`)**:
+    - Phase orchestrator with dependency-aware execution order
+    - CLI flags: --dry-run, --status, --reset, --force, --verbose, --phase
+    - Graceful shutdown with SIGINT/SIGTERM handlers
+    - Progress display with phase completion tracking
+  - **Import Configuration (`import-config.ts`)**:
+    - Target congress definition (118, 119)
+    - Batch sizes tuned for API limits and DB performance
+    - Rate limit configuration (900 requests/hour, 100 burst capacity)
+    - Retry settings with exponential backoff (3 retries, 30s max delay)
+    - Timeout configuration (30s request, 60s transaction, 4h phase)
+    - Estimated record counts for progress tracking
+    - Phase dependencies: legislators → committees → bills → votes → validate
+  - **Checkpoint Manager (`checkpoint-manager.ts`)**:
+    - JSON-based progress persistence for resumable imports
+    - Multi-dimensional tracking (phase, congress, billType, chamber, offset)
+    - Automatic backup rotation
+    - Flush on interval and graceful shutdown
+    - Progress summary with elapsed time and ETA
+  - **Import Scripts**:
+    - `import-legislators.ts`: Current and historical members import
+    - `import-committees.ts`: Committee hierarchy with parent-child ordering
+    - `import-bills.ts`: Bills for 118th/119th Congress with sponsor linking
+    - `import-votes.ts`: Roll call votes with individual positions
+  - **Data Validation (`validate-import.ts`)**:
+    - Record count validation (80% threshold of estimates)
+    - Referential integrity checks (sponsors, committees, votes)
+    - Data quality validation (required fields, dates)
+    - Chamber and party distribution validation
+    - Sync timestamp freshness checks
+  - **Operational Runbook (`data-import-runbook.md`)**:
+    - Quick start guide
+    - Phase-by-phase documentation
+    - CLI reference with examples
+    - Troubleshooting guide
+    - Performance tuning recommendations
+    - Recovery and resumption procedures
+
+### Technical Details
+- **Test Coverage**: 37 new unit tests for checkpoint-manager (all passing)
+- **Pattern**: AsyncGenerator for memory-efficient streaming
+- **Rate Limiting**: Token bucket with 1000 req/hour limit
+- **Resumability**: Checkpoint saved every 100 records and 30 seconds
+- **Data Volume**: ~20,000 bills, ~550 legislators, ~280 committees, ~900,000 vote positions
+- **Estimated Duration**: 4-8 hours for full import
+
+### Changed
+- Removed WP7-A from Unreleased/Planned section (completed)
 
 ---
 
@@ -337,6 +391,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.5.0 | 2026-01-28 | Phase 1 WebSocket layer complete |
 | 0.5.1 | 2026-01-28 | Phase 1 gap analysis and work packages defined |
 | 0.6.0 | 2026-01-28 | Phase 1 data ingestion core complete (WP3-A) |
+| 0.7.0 | 2026-01-28 | Phase 1 historical data load complete (WP7-A) |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |
 | 1.2.0 | TBD | Phase 2 analysis models complete |
