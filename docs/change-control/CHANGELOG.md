@@ -21,12 +21,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.8.0] - 2026-01-29
 
 ### Added
-- **WP8 Historical Data Execution (apps/api/scripts)**:
-  - **Votes Import Execution**: Congress 118 House votes import in progress
+- **WP8 Historical Data Execution - COMPLETE**:
+  - **Votes Import Execution**: Congress 119 House votes fully imported (1,117 votes)
   - **Database Verification Script (`count-votes.ts`)**:
     - Real-time vote count verification against checkpoint
     - Breakdown by Congress number
     - Monorepo-compatible dotenv path resolution
+  - **QC Documentation**: 8 frontend screenshots captured (`docs/screenshots/2026-01-29/`)
 
 ### Fixed
 - **WP8-BUG7: Prisma billId Relation Syntax (`import-votes.ts`)**:
@@ -38,15 +39,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Affected fields: yeas, nays, present, notVoting
 
 ### Technical Details
-- **Import Progress**: 640/1,800 House votes (35.6% as of latest checkpoint)
-- **Database Verification**: 652 votes in database (Congress 118)
-- **Rate Limiting**: 3 graceful timeout recoveries during import
-- **Bug Fixes Verified**: Both fixes confirmed working through live import observation
-- **Pattern Applied**: Monorepo dotenv loading with explicit path resolution
+- **Import Results (Final)**:
+  - Roll calls created: 974
+  - Roll calls updated: 142
+  - Roll calls skipped: 8 (no bill match)
+  - Total processed: 1,116 records
+  - Duration: ~62 minutes
+  - Error rate: 0.07% (1 error out of 1,116)
+- **Database Record Counts**:
+  - Legislators: 2,688
+  - Committees: 809
+  - Bills: 13,674
+  - Roll Call Votes: 1,117
+- **API Endpoints Verified**: 31 endpoints across 7 route files
+- **Test Suite**: 349 tests passing (15 test files)
+- **TypeScript**: All packages pass type check (api, web, shared)
+- **Completed Phases**: legislators, committees, bills, votes
 
-### In Progress
-- Votes import continuing in background (estimated 45-60 minutes remaining)
-- QC verification and screenshot capture pending
+### QC Verification
+- Frontend screenshots: 8 pages captured
+- API health: Responding on port 4000
+- Web frontend: Responding on port 3001
+- All services operational
 
 ---
 
@@ -452,6 +466,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.5.1 | 2026-01-28 | Phase 1 gap analysis and work packages defined |
 | 0.6.0 | 2026-01-28 | Phase 1 data ingestion core complete (WP3-A) |
 | 0.7.0 | 2026-01-28 | Phase 1 historical data load complete (WP7-A) |
+| 0.8.0 | 2026-01-29 | WP8 historical data execution complete (1,117 votes) |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |
 | 1.2.0 | TBD | Phase 2 analysis models complete |
