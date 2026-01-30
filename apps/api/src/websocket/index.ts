@@ -10,7 +10,7 @@ import type { Server } from 'http';
 import type { IncomingMessage } from 'http';
 import { logger } from '../lib/logger.js';
 import { roomManager } from './room-manager.js';
-import { authenticateWebSocketRequest } from './auth.js';
+import { authenticateWebSocketRequest, requiresAuthentication } from './auth.js';
 import type {
   ExtendedWebSocket,
   ClientMessage,
@@ -224,6 +224,13 @@ function handlePing(ws: ExtendedWebSocket): void {
 }
 
 function handleSubscribe(ws: ExtendedWebSocket, topic: string): void {
+  // Check if room requires authentication
+  if (requiresAuthentication(topic) && !ws.userId) {
+    sendError(ws, WS_ERROR_CODES.UNAUTHORIZED, 'Authentication required for this topic');
+    logger.warn({ clientId: ws.clientId, topic }, 'Anonymous client denied access to protected topic');
+    return;
+  }
+
   const subscribed = roomManager.subscribe(ws, topic);
 
   if (subscribed) {
@@ -234,7 +241,7 @@ function handleSubscribe(ws: ExtendedWebSocket, topic: string): void {
         timestamp: new Date().toISOString(),
       },
     });
-    logger.info({ clientId: ws.clientId, topic }, 'Client subscribed');
+    logger.info({ clientId: ws.clientId, topic, userId: ws.userId }, 'Client subscribed');
   } else {
     // Either already subscribed or invalid topic
     const existingRooms = roomManager.getClientRooms(ws);
