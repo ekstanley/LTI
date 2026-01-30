@@ -12,6 +12,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { authService } from '../services/auth.service.js';
 import { oauthService } from '../services/oauth.service.js';
+import { validateRedirectUrl } from '../middleware/validateRedirectUrl.js';
 import { config } from '../config.js';
 
 export const authRouter: RouterType = Router();
@@ -477,6 +478,16 @@ authRouter.get('/providers', (_req, res) => {
  */
 authRouter.get('/google', (req, res) => {
   const redirectUrl = req.query.redirectUrl as string | undefined;
+
+  // SECURITY: Validate redirect URL against allowlist to prevent open redirect attacks
+  if (!validateRedirectUrl(redirectUrl)) {
+    res.status(400).json({
+      error: 'invalid_redirect',
+      message: 'Invalid redirect URL. Must be a trusted domain.',
+    });
+    return;
+  }
+
   const authUrl = oauthService.getGoogleAuthUrl(redirectUrl);
 
   if (!authUrl) {
@@ -566,6 +577,16 @@ authRouter.get('/google/callback', async (req, res, next) => {
  */
 authRouter.get('/github', (req, res) => {
   const redirectUrl = req.query.redirectUrl as string | undefined;
+
+  // SECURITY: Validate redirect URL against allowlist to prevent open redirect attacks
+  if (!validateRedirectUrl(redirectUrl)) {
+    res.status(400).json({
+      error: 'invalid_redirect',
+      message: 'Invalid redirect URL. Must be a trusted domain.',
+    });
+    return;
+  }
+
   const authUrl = oauthService.getGitHubAuthUrl(redirectUrl);
 
   if (!authUrl) {
