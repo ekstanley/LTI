@@ -4,9 +4,8 @@
  * Validates JWT tokens for WebSocket connections using the jwtService.
  * Provides proper signature verification and expiration checking.
  *
- * Token can be provided via:
- * - Query string: ws://host/ws?token=xxx
- * - Sec-WebSocket-Protocol header: token.<jwt>
+ * Token must be provided via Sec-WebSocket-Protocol header: token.<jwt>
+ * Query string tokens are NOT supported for security reasons (logs, history).
  */
 
 import type { IncomingMessage } from 'http';
@@ -71,18 +70,17 @@ export function authenticateWebSocketRequest(req: IncomingMessage): AuthResult {
 }
 
 /**
- * Extract token from request
- * Priority: 1) Query string, 2) Sec-WebSocket-Protocol
+ * Extract token from Sec-WebSocket-Protocol header
+ *
+ * SECURITY: Query string tokens are explicitly NOT supported because they:
+ * - Appear in server access logs
+ * - Are stored in browser history
+ * - Are visible to proxies and CDNs
+ * - Can leak via Referrer headers
+ * - May be captured by analytics tools
  */
 function extractToken(req: IncomingMessage): string | null {
-  // Try query string first
-  const url = new URL(req.url ?? '', `http://${req.headers.host}`);
-  const queryToken = url.searchParams.get('token');
-  if (queryToken) {
-    return queryToken;
-  }
-
-  // Try Sec-WebSocket-Protocol header (custom subprotocol pattern)
+  // Extract token from Sec-WebSocket-Protocol header (custom subprotocol pattern)
   const protocols = req.headers['sec-websocket-protocol'];
   if (protocols) {
     const protocolList = protocols.split(',').map((p) => p.trim());

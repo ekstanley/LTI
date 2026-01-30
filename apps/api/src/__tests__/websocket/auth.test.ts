@@ -71,9 +71,10 @@ describe('WebSocket Authentication', () => {
       });
     });
 
-    describe('token extraction from query string', () => {
-      it('extracts and verifies token from query string', () => {
+    describe('security - query string rejection', () => {
+      it('rejects query string tokens for security reasons', () => {
         const token = 'valid.jwt.token';
+        // Even though token is valid, query string should be rejected
         mockVerifyAccessToken.mockReturnValue({
           valid: true,
           payload: { sub: 'user-123' },
@@ -82,24 +83,11 @@ describe('WebSocket Authentication', () => {
         const req = createMockRequest({ url: `/ws?token=${token}` });
         const result = authenticateWebSocketRequest(req);
 
+        // Should be treated as anonymous (no token extracted from query string)
         expect(result.authenticated).toBe(true);
-        expect(result.userId).toBe('user-123');
-        expect(mockVerifyAccessToken).toHaveBeenCalledWith(token);
-      });
-
-      it('handles URL-encoded token', () => {
-        const token = 'valid.jwt.token';
-        const encodedToken = encodeURIComponent(token);
-        mockVerifyAccessToken.mockReturnValue({
-          valid: true,
-          payload: { sub: 'user-456' },
-        });
-
-        const req = createMockRequest({ url: `/ws?token=${encodedToken}` });
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(true);
-        expect(result.userId).toBe('user-456');
+        expect(result.userId).toBeUndefined();
+        // jwtService should NOT be called for query string tokens
+        expect(mockVerifyAccessToken).not.toHaveBeenCalled();
       });
     });
 
@@ -140,27 +128,6 @@ describe('WebSocket Authentication', () => {
         expect(result.authenticated).toBe(true);
         expect(result.userId).toBe('user-abc');
       });
-
-      it('prioritizes query string over protocol header', () => {
-        const queryToken = 'query.jwt.token';
-        const headerToken = 'header.jwt.token';
-        mockVerifyAccessToken.mockReturnValue({
-          valid: true,
-          payload: { sub: 'query-user' },
-        });
-
-        const req = createMockRequest({
-          url: `/ws?token=${queryToken}`,
-          protocol: `token.${headerToken}`,
-        });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.userId).toBe('query-user');
-        expect(mockVerifyAccessToken).toHaveBeenCalledWith(queryToken);
-        // Should NOT verify header token
-        expect(mockVerifyAccessToken).not.toHaveBeenCalledWith(headerToken);
-      });
     });
 
     describe('token verification errors', () => {
@@ -170,7 +137,10 @@ describe('WebSocket Authentication', () => {
           error: 'expired',
         });
 
-        const req = createMockRequest({ url: '/ws?token=expired.jwt.token' });
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.expired.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(false);
@@ -183,7 +153,10 @@ describe('WebSocket Authentication', () => {
           error: 'invalid',
         });
 
-        const req = createMockRequest({ url: '/ws?token=invalid.jwt.token' });
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.invalid.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(false);
@@ -196,7 +169,10 @@ describe('WebSocket Authentication', () => {
           error: 'malformed',
         });
 
-        const req = createMockRequest({ url: '/ws?token=malformed' });
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.malformed',
+        });
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(false);
@@ -209,7 +185,10 @@ describe('WebSocket Authentication', () => {
           error: 'revoked',
         });
 
-        const req = createMockRequest({ url: '/ws?token=revoked.jwt.token' });
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.revoked.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(false);
@@ -222,7 +201,10 @@ describe('WebSocket Authentication', () => {
           error: 'unknown_error',
         });
 
-        const req = createMockRequest({ url: '/ws?token=some.jwt.token' });
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.some.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(false);
@@ -237,7 +219,10 @@ describe('WebSocket Authentication', () => {
           payload: { sub: 'verified-user-id', email: 'test@example.com' },
         });
 
-        const req = createMockRequest({ url: '/ws?token=valid.jwt.token' });
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.valid.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(true);
