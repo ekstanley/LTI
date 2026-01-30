@@ -1,5 +1,5 @@
 /**
- * API client for LTIP backend
+ * API client for LTIP backend with CSRF protection
  */
 
 import type {
@@ -13,6 +13,67 @@ import type {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+// ============================================================================
+// CSRF Token Management
+// ============================================================================
+
+/**
+ * In-memory CSRF token storage
+ * Token is automatically rotated on each protected request
+ */
+let csrfToken: string | null = null;
+
+/**
+ * HTTP methods that require CSRF protection
+ */
+const CSRF_PROTECTED_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+
+/**
+ * Fetch CSRF token from server
+ * Should be called after authentication
+ */
+export async function fetchCsrfToken(): Promise<string> {
+  const url = `${API_BASE_URL}/api/v1/auth/csrf-token`;
+
+  const response = await fetch(url, {
+    credentials: 'include', // Include cookies for session
+    headers: {
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch CSRF token');
+  }
+
+  const data = await response.json();
+  if (!data.csrfToken || typeof data.csrfToken !== 'string') {
+    throw new Error('Invalid CSRF token response');
+  }
+
+  csrfToken = data.csrfToken;
+  return data.csrfToken;
+}
+
+/**
+ * Get current CSRF token
+ * Returns null if not yet fetched
+ */
+export function getCsrfToken(): string | null {
+  return csrfToken;
+}
+
+/**
+ * Clear CSRF token (on logout)
+ */
+export function clearCsrfToken(): void {
+  csrfToken = null;
+}
+
+// ============================================================================
+// API Error Handling
+// ============================================================================
+
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -24,19 +85,39 @@ class ApiError extends Error {
   }
 }
 
+// ============================================================================
+// HTTP Client with CSRF Protection
+// ============================================================================
+
 async function fetcher<T>(
   endpoint: string,
   options?: RequestInit
 ): Promise<T> {
   const url = `${API_BASE_URL}${endpoint}`;
+  const method = options?.method?.toUpperCase() ?? 'GET';
+
+  // Build headers with CSRF token for protected methods
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+    ...options?.headers,
+  };
+
+  // Add CSRF token header for state-changing requests
+  if (CSRF_PROTECTED_METHODS.has(method) && csrfToken) {
+    (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+  }
 
   const response = await fetch(url, {
     ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...options?.headers,
-    },
+    credentials: 'include', // Include cookies for session
+    headers,
   });
+
+  // Extract and store new CSRF token from response header (automatic rotation)
+  const newCsrfToken = response.headers.get('X-CSRF-Token');
+  if (newCsrfToken) {
+    csrfToken = newCsrfToken;
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
