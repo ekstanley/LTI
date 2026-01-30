@@ -22,8 +22,34 @@ const app = express();
 // Trust proxy for rate limiting behind reverse proxy
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet());
+// Security middleware with production hardening
+app.use(
+  helmet({
+    // Strict Transport Security - enforce HTTPS
+    hsts: {
+      maxAge: 31536000, // 1 year in seconds
+      includeSubDomains: true,
+      preload: true,
+    },
+    // Content Security Policy - restrictive for API
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'none'"],
+        frameAncestors: ["'none'"],
+      },
+    },
+    // Prevent clickjacking
+    frameguard: { action: 'deny' },
+    // Prevent MIME type sniffing
+    noSniff: true,
+    // Referrer policy
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    // Cross-origin policies
+    crossOriginEmbedderPolicy: false, // Disabled for API compatibility
+    crossOriginOpenerPolicy: { policy: 'same-origin' },
+    crossOriginResourcePolicy: { policy: 'same-origin' },
+  })
+);
 app.use(
   cors({
     origin: config.corsOrigins,
