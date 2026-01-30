@@ -593,16 +593,59 @@ model User {
   email        String  @unique
   passwordHash String? // Null for OAuth-only users
 
+  // Profile
+  name      String?
+  avatarUrl String?
+
+  // OAuth provider IDs
+  googleId String? @unique
+  githubId String? @unique
+
+  // Email verification
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  // Account status
+  isActive    Boolean   @default(true)
+  lastLoginAt DateTime?
+
   // Rate limiting
   rateLimit Int @default(100) // Requests per minute
 
   subscriptions Subscription[]
   apiKeys       ApiKey[]
+  refreshTokens RefreshToken[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("users")
+}
+
+/// Refresh token for JWT rotation (secure session management)
+model RefreshToken {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique // SHA-256 hash of actual token
+  familyId  String   // Groups related tokens for theft detection
+
+  // Device/session info for security monitoring
+  userAgent String?
+  ipAddress String?
+
+  // Token lifecycle
+  expiresAt DateTime
+  revokedAt DateTime?
+  replacedBy String? // ID of token that replaced this one
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 
 /// API key for programmatic access
