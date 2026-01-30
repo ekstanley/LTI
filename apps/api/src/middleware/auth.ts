@@ -178,9 +178,10 @@ export async function optionalAuth(
 
     next();
   } catch (error) {
-    // On any error, continue without authentication
-    logger.error({ error }, 'Unexpected error in optionalAuth middleware, continuing unauthenticated');
-    next();
+    // SECURITY: Fail closed on unexpected errors instead of silently downgrading to unauthenticated
+    // This prevents attackers from exploiting error conditions to bypass authentication
+    logger.error({ error }, 'Unexpected error in optionalAuth middleware');
+    next(ApiError.internal('Authentication service temporarily unavailable'));
   }
 }
 

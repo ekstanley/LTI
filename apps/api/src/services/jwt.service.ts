@@ -346,16 +346,21 @@ export const jwtService = {
       existingFamilyId: familyId,
     });
 
+    // Extract the new token's JTI from the generated refresh token
+    // SECURITY: Use decode (not verify) since we just generated this token
+    const newTokenPayload = jwt.decode(newTokenPair.refreshToken) as RefreshTokenPayload | null;
+    const newTokenJti = newTokenPayload?.jti;
+
     // Mark old token as revoked and link to replacement
     await prisma.refreshToken.update({
       where: { id: jti },
       data: {
         revokedAt: new Date(),
-        replacedBy: jti, // Link to the new token's ID (from generateTokenPair)
+        replacedBy: newTokenJti ?? null, // Link to the NEW token's ID for audit trail
       },
     });
 
-    logger.debug({ userId, familyId, oldJti: jti }, 'Rotated refresh token');
+    logger.debug({ userId, familyId, oldJti: jti, newJti: newTokenJti }, 'Rotated refresh token');
 
     return newTokenPair;
   },

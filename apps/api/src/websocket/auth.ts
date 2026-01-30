@@ -13,11 +13,18 @@ import type { IncomingMessage } from 'http';
 import { jwtService } from '../services/jwt.service.js';
 import { logger } from '../lib/logger.js';
 
-export interface AuthResult {
-  authenticated: boolean;
-  userId?: string;
-  error?: string;
-}
+/**
+ * Authentication result - uses discriminated union to prevent illegal states
+ *
+ * Valid states:
+ * - Authenticated user: { authenticated: true, userId: string }
+ * - Anonymous connection: { authenticated: true } (no userId)
+ * - Authentication failed: { authenticated: false, error: string }
+ */
+export type AuthResult =
+  | { authenticated: true; userId: string; error?: never }
+  | { authenticated: true; userId?: undefined; error?: never }
+  | { authenticated: false; userId?: never; error: string };
 
 /**
  * Extract and validate JWT from WebSocket upgrade request

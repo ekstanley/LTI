@@ -8,6 +8,7 @@
  */
 
 import argon2 from 'argon2';
+import { randomInt } from 'crypto';
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 
@@ -206,9 +207,10 @@ export const passwordService = {
     const special = '!@#$%^&*()_+-=[]{}|;:,.<>?';
     const all = lowercase + uppercase + digits + special;
 
-    // Helper to get random character from string (index is always valid)
+    // Helper to get cryptographically secure random character from string
+    // SECURITY: Uses crypto.randomInt() instead of Math.random() for CSPRNG
     const randomChar = (str: string): string => {
-      const idx = Math.floor(Math.random() * str.length);
+      const idx = randomInt(str.length);
       return str.charAt(idx);
     };
 
@@ -225,9 +227,10 @@ export const passwordService = {
       password.push(randomChar(all));
     }
 
-    // Shuffle the password (Fisher-Yates)
+    // Shuffle the password (Fisher-Yates with CSPRNG)
+    // SECURITY: Uses crypto.randomInt() for cryptographically secure shuffle
     for (let i = password.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = randomInt(i + 1);
       const temp = password[i];
       password[i] = password[j] as string;
       password[j] = temp as string;

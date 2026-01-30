@@ -457,10 +457,89 @@ See: `docs/plans/2026-01-29-phase2-planning.md`
 
 ---
 
+### CR-2026-01-29-004: SEC-001/SEC-002 Authentication Security Remediation
+
+**Status**: Implemented
+**Category**: 3 (Major Change - Security)
+**Priority**: Critical
+
+#### Timeline
+- Requested: 2026-01-29
+- Reviewed: 2026-01-29
+- Approved: 2026-01-29
+- Implemented: 2026-01-29
+
+#### Description
+Security remediation for 5 P0 critical issues identified during QC review of SEC-001 (JWT Authentication) and SEC-002 (Password Security) implementations.
+
+#### Justification
+QC review identified critical security vulnerabilities requiring immediate remediation before production deployment.
+
+#### Impact Assessment
+- **Scope Impact**: None (security hardening within existing auth system)
+- **Timeline Impact**: None
+- **Budget Impact**: None
+- **Risk Level**: High (security vulnerabilities addressed)
+
+#### Affected Components
+- [x] Backend API
+- [ ] Frontend
+- [ ] Database
+- [ ] ML Pipeline
+- [ ] Infrastructure
+- [x] Documentation
+
+#### P0 Critical Fixes Implemented
+
+| ID | Issue | Severity | Fix | Location |
+|----|-------|----------|-----|----------|
+| SEC-C01 | Hardcoded JWT secret fallback in development | P0 | Use environment-only secret with explicit warning | `config.ts:59-63` |
+| SEC-C02 | Math.random() for password generation (not CSPRNG) | P0 | Replace with crypto.randomInt() | `password.service.ts:212-214,232-233` |
+| SEC-C03 | Token rotation `replacedBy` self-references old token | P0 | Decode new token to extract jti for audit trail | `jwt.service.ts:349-363` |
+| SEC-C04 | Silent auth downgrade on errors in optionalAuth | P0 | Fail-closed with ApiError.internal() | `middleware/auth.ts:180-184` |
+| SEC-C05 | AuthResult interface allows illegal states | P0 | Convert to discriminated union with `never` types | `websocket/auth.ts:24-27` |
+
+#### Technical Details
+
+**SEC-C01: JWT Secret Configuration**
+- Problem: Hardcoded development fallback allowed predictable secrets
+- Solution: Environment variable required, explicit console warning in development
+
+**SEC-C02: CSPRNG for Password Generation**
+- Problem: `Math.random()` is not cryptographically secure
+- Solution: Use Node.js `crypto.randomInt()` for all random character selection
+
+**SEC-C03: Token Rotation Audit Trail**
+- Problem: `replacedBy: jti` pointed to old token's ID instead of new token
+- Solution: Decode newly generated refresh token to extract its jti for proper linkage
+
+**SEC-C04: Fail-Closed Authentication**
+- Problem: Unexpected errors silently continued without authentication
+- Solution: Return 500 error on unexpected exceptions (security-critical behavior)
+
+**SEC-C05: Type-Safe AuthResult**
+- Problem: Interface allowed `{ authenticated: true, error: "something" }`
+- Solution: Discriminated union prevents impossible states at compile time
+
+#### Verification Results
+- TypeScript: 0 errors
+- All 351 unit tests pass
+- QC code review agents: 3/3 approved
+  - SEC-C03: Correct audit trail linkage
+  - SEC-C04: Appropriate fail-closed behavior
+  - SEC-C05: Effective `never` type constraints
+
+#### Rollback Plan
+- Revert individual commits if issues arise
+- Each fix is isolated and independently reversible
+
+---
+
 ## Document Control
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 1.7.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-004 (SEC-001/SEC-002 Security Remediation) |
 | 1.6.0 | 2026-01-29 | ODIN | Added CR-2026-01-29-003 (Phase 2 Planning) |
 | 1.5.0 | 2026-01-29 | ODIN | **CR-2026-01-29-002 COMPLETE**: T5-T8 implemented, search debouncing added, QC findings addressed |
 | 1.4.0 | 2026-01-29 | ODIN | Added QC findings and commit references to CR-2026-01-29-002 |

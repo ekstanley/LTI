@@ -16,7 +16,8 @@ const envSchema = z.object({
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
 
   // Authentication configuration
-  JWT_SECRET: z.string().min(32).default('development-jwt-secret-change-in-production-32chars'),
+  // SECURITY: JWT_SECRET must be set via environment variable - no default in production
+  JWT_SECRET: z.string().min(32).optional(),
   JWT_ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_TOKEN_EXPIRES_IN: z.string().default('7d'),
   JWT_ISSUER: z.string().default('ltip-api'),
@@ -49,6 +50,18 @@ const envSchema = z.object({
 
 const env = envSchema.parse(process.env);
 
+// SECURITY: Validate JWT_SECRET is set in production
+if (env.NODE_ENV === 'production' && !env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set in production. Generate with: openssl rand -base64 32');
+}
+
+// Validate JWT_SECRET is set in non-test environments or provide test default
+const jwtSecret = env.JWT_SECRET ?? (env.NODE_ENV === 'test' ? 'test-jwt-secret-for-unit-tests-only-32chars!' : (() => {
+  // Development mode: Allow startup but warn
+  console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.');
+  return 'development-jwt-secret-change-in-production-32chars';
+})());
+
 export const config = {
   nodeEnv: env.NODE_ENV,
   isDev: env.NODE_ENV === 'development',
@@ -66,7 +79,7 @@ export const config = {
 
   // JWT configuration
   jwt: {
-    secret: env.JWT_SECRET,
+    secret: jwtSecret,
     accessTokenExpiresIn: env.JWT_ACCESS_TOKEN_EXPIRES_IN,
     refreshTokenExpiresIn: env.JWT_REFRESH_TOKEN_EXPIRES_IN,
     issuer: env.JWT_ISSUER,
