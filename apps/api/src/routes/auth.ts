@@ -143,6 +143,10 @@ authRouter.post('/login', validate(loginSchema), async (req, res, next) => {
       const errorMessages: Record<string, { status: number; message: string }> = {
         invalid_credentials: { status: 401, message: 'Invalid email or password' },
         account_inactive: { status: 403, message: 'Account is inactive' },
+        account_locked: {
+          status: 429,
+          message: 'Account temporarily locked due to too many failed login attempts. Please try again later.',
+        },
         internal: { status: 500, message: 'Login failed' },
       };
 

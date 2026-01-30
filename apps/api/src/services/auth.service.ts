@@ -67,7 +67,7 @@ export interface LoginResult {
 
 export interface LoginError {
   success: false;
-  error: 'invalid_credentials' | 'account_inactive' | 'internal';
+  error: 'invalid_credentials' | 'account_inactive' | 'account_locked' | 'internal';
 }
 
 export type LoginResponse = LoginResult | LoginError;
@@ -175,6 +175,9 @@ export const authService = {
           emailVerified: true,
           isActive: true,
           passwordHash: true,
+          failedLoginAttempts: true,
+          lastFailedLoginAt: true,
+          accountLockedUntil: true,
         },
       });
 
@@ -195,11 +198,64 @@ export const authService = {
         return { success: false, error: 'account_inactive' };
       }
 
+      // Check if account is locked (CWE-307 protection)
+      const now = new Date();
+      if (user.accountLockedUntil && user.accountLockedUntil > now) {
+        // Perform dummy hash to prevent timing attacks
+        await passwordService.hash('dummy-password-for-timing');
+        logger.warn(
+          { userId: user.id, lockedUntil: user.accountLockedUntil },
+          'SECURITY: Login attempt on locked account'
+        );
+        return { success: false, error: 'account_locked' };
+      }
+
       // Verify password
       const verification = await passwordService.verify(input.password, user.passwordHash);
 
       if (!verification.valid) {
+        // Track failed login attempt (CWE-307 protection)
+        const failedAttempts = user.failedLoginAttempts + 1;
+        const MAX_FAILED_ATTEMPTS = 5;
+        const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+
+        const updateData: {
+          failedLoginAttempts: number;
+          lastFailedLoginAt: Date;
+          accountLockedUntil?: Date;
+        } = {
+          failedLoginAttempts: failedAttempts,
+          lastFailedLoginAt: now,
+        };
+
+        // Lock account if threshold exceeded
+        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
+          updateData.accountLockedUntil = new Date(now.getTime() + LOCKOUT_DURATION_MS);
+          logger.warn(
+            { userId: user.id, failedAttempts, lockedUntil: updateData.accountLockedUntil },
+            'SECURITY: Account locked due to excessive failed login attempts'
+          );
+        }
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: updateData,
+        });
+
         return { success: false, error: 'invalid_credentials' };
+      }
+
+      // Reset failed login attempts on successful login (CWE-307 protection)
+      if (user.failedLoginAttempts > 0 || user.accountLockedUntil) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: 0,
+            lastFailedLoginAt: null,
+            accountLockedUntil: null,
+          },
+        });
+        logger.debug({ userId: user.id }, 'Failed login attempts reset after successful login');
       }
 
       // Rehash password if needed (config changed)
