@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { pinoHttp } from 'pino-http';
 import { createServer } from 'http';
 
@@ -15,6 +16,7 @@ import { votesRouter } from './routes/votes.js';
 import { analysisRouter } from './routes/analysis.js';
 import { conflictsRouter } from './routes/conflicts.js';
 import { committeesRouter } from './routes/committees.js';
+import { authRouter } from './routes/auth.js';
 import { setupWebSocket } from './websocket/index.js';
 
 const app = express();
@@ -60,6 +62,7 @@ app.use(
 // Request parsing
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Logging
 app.use(
@@ -83,6 +86,7 @@ app.use('/api/v1/voting-record', votesRouter); // Alias for votes (common altern
 app.use('/api/v1/analysis', analysisRouter);
 app.use('/api/v1/conflicts', conflictsRouter);
 app.use('/api/v1/committees', committeesRouter);
+app.use('/api/v1/auth', authRouter);
 
 // Error handling
 app.use(notFoundHandler);
