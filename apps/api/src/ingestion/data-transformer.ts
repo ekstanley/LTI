@@ -89,6 +89,101 @@ const COMMITTEE_TYPE_MAP: Record<string, CommitteeType> = {
   SPECIAL: 'SPECIAL',
 } as const;
 
+/**
+ * US State codes to names mapping.
+ * Defined locally to avoid ESM/CJS interop issues with @ltip/shared package.
+ */
+const US_STATES: Record<string, string> = {
+  AL: 'Alabama',
+  AK: 'Alaska',
+  AZ: 'Arizona',
+  AR: 'Arkansas',
+  CA: 'California',
+  CO: 'Colorado',
+  CT: 'Connecticut',
+  DE: 'Delaware',
+  FL: 'Florida',
+  GA: 'Georgia',
+  HI: 'Hawaii',
+  ID: 'Idaho',
+  IL: 'Illinois',
+  IN: 'Indiana',
+  IA: 'Iowa',
+  KS: 'Kansas',
+  KY: 'Kentucky',
+  LA: 'Louisiana',
+  ME: 'Maine',
+  MD: 'Maryland',
+  MA: 'Massachusetts',
+  MI: 'Michigan',
+  MN: 'Minnesota',
+  MS: 'Mississippi',
+  MO: 'Missouri',
+  MT: 'Montana',
+  NE: 'Nebraska',
+  NV: 'Nevada',
+  NH: 'New Hampshire',
+  NJ: 'New Jersey',
+  NM: 'New Mexico',
+  NY: 'New York',
+  NC: 'North Carolina',
+  ND: 'North Dakota',
+  OH: 'Ohio',
+  OK: 'Oklahoma',
+  OR: 'Oregon',
+  PA: 'Pennsylvania',
+  RI: 'Rhode Island',
+  SC: 'South Carolina',
+  SD: 'South Dakota',
+  TN: 'Tennessee',
+  TX: 'Texas',
+  UT: 'Utah',
+  VT: 'Vermont',
+  VA: 'Virginia',
+  WA: 'Washington',
+  WV: 'West Virginia',
+  WI: 'Wisconsin',
+  WY: 'Wyoming',
+  DC: 'District of Columbia',
+  PR: 'Puerto Rico',
+  VI: 'Virgin Islands',
+  GU: 'Guam',
+  AS: 'American Samoa',
+  MP: 'Northern Mariana Islands',
+} as const;
+
+/**
+ * Reverse mapping from state names to 2-character codes.
+ * Created from US_STATES constant (code -> name) by inverting the mapping.
+ */
+const STATE_NAME_TO_CODE: Record<string, string> = Object.entries(
+  US_STATES
+).reduce(
+  (acc, [code, name]) => {
+    acc[name] = code;
+    return acc;
+  },
+  {} as Record<string, string>
+);
+
+/**
+ * Converts a state name to its 2-character code.
+ * Returns the input unchanged if already a 2-char code or if not found.
+ *
+ * @example mapStateToCode("California") => "CA"
+ * @example mapStateToCode("CA") => "CA"
+ * @example mapStateToCode(undefined) => "XX"
+ */
+function mapStateToCode(state: string | null | undefined): string {
+  if (!state) return 'XX';
+  // If already a 2-char code, return as-is
+  if (state.length === 2 && state === state.toUpperCase()) {
+    return state;
+  }
+  // Look up in reverse mapping
+  return STATE_NAME_TO_CODE[state] ?? 'XX';
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // ID Generators
 // ─────────────────────────────────────────────────────────────────────────────
@@ -544,7 +639,8 @@ export function transformMemberListItem(
     fullName: item.name,
     party: mapParty(item.partyName),
     chamber: mapChamber(latestTerm?.chamber) ?? 'HOUSE',
-    state: item.state ?? latestTerm?.stateCode ?? 'XX',
+    // Prioritize stateCode (already 2-char) over state name (needs conversion)
+    state: latestTerm?.stateCode ?? mapStateToCode(item.state),
     district: item.district ?? latestTerm?.district ?? null,
     inOffice: true, // Assume true for list items
     dataSource: 'CONGRESS_GOV' as DataSource,
@@ -561,7 +657,8 @@ export function transformMemberDetail(
   // Get latest term info
   const latestTerm = detail.terms?.[0];
   const chamber = mapChamber(latestTerm?.chamber);
-  const state = detail.state ?? latestTerm?.stateCode;
+  // Prioritize stateCode (already 2-char) over state name (needs conversion)
+  const state = latestTerm?.stateCode ?? mapStateToCode(detail.state);
 
   // Build result object conditionally to satisfy exactOptionalPropertyTypes
   const result: LegislatorUpdateInput = {

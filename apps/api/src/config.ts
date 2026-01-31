@@ -1,4 +1,9 @@
+import { config as loadEnv } from 'dotenv';
+import { resolve } from 'path';
 import { z } from 'zod';
+
+// Load environment variables from repository root (handles scripts running from different dirs)
+loadEnv({ path: resolve(import.meta.dirname, '../../../.env') });
 
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
@@ -9,6 +14,30 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
   RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(100),
+
+  // Authentication configuration
+  // SECURITY: JWT_SECRET must be set via environment variable - no default in production
+  JWT_SECRET: z.string().min(32).optional(),
+  JWT_ACCESS_TOKEN_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_TOKEN_EXPIRES_IN: z.string().default('7d'),
+  JWT_ISSUER: z.string().default('ltip-api'),
+  JWT_AUDIENCE: z.string().default('ltip-web'),
+
+  // OAuth providers (optional - only needed if OAuth enabled)
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GOOGLE_CALLBACK_URL: z.string().default('/api/v1/auth/google/callback'),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CALLBACK_URL: z.string().default('/api/v1/auth/github/callback'),
+
+  // Session/cookie settings
+  COOKIE_DOMAIN: z.string().optional(),
+  COOKIE_SECURE: z
+    .string()
+    .transform((v) => v === 'true')
+    .default('false'),
+
   // Congress.gov API configuration
   CONGRESS_API_KEY: z.string().optional(),
   CONGRESS_API_BASE_URL: z.string().default('https://api.congress.gov/v3'),
@@ -20,6 +49,18 @@ const envSchema = z.object({
 });
 
 const env = envSchema.parse(process.env);
+
+// SECURITY: Validate JWT_SECRET is set in production
+if (env.NODE_ENV === 'production' && !env.JWT_SECRET) {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set in production. Generate with: openssl rand -base64 32');
+}
+
+// Validate JWT_SECRET is set in non-test environments or provide test default
+const jwtSecret = env.JWT_SECRET ?? (env.NODE_ENV === 'test' ? 'test-jwt-secret-for-unit-tests-only-32chars!' : (() => {
+  // Development mode: Allow startup but warn
+  console.warn('⚠️  WARNING: JWT_SECRET not set. Using insecure default for development only.');
+  return 'development-jwt-secret-change-in-production-32chars';
+})());
 
 export const config = {
   nodeEnv: env.NODE_ENV,
@@ -35,6 +76,50 @@ export const config = {
     windowMs: env.RATE_LIMIT_WINDOW_MS,
     maxRequests: env.RATE_LIMIT_MAX_REQUESTS,
   },
+
+  // JWT configuration
+  jwt: {
+    secret: jwtSecret,
+    accessTokenExpiresIn: env.JWT_ACCESS_TOKEN_EXPIRES_IN,
+    refreshTokenExpiresIn: env.JWT_REFRESH_TOKEN_EXPIRES_IN,
+    issuer: env.JWT_ISSUER,
+    audience: env.JWT_AUDIENCE,
+    algorithm: 'HS256' as const,
+  },
+
+  // OAuth providers
+  oauth: {
+    google: {
+      clientId: env.GOOGLE_CLIENT_ID,
+      clientSecret: env.GOOGLE_CLIENT_SECRET,
+      callbackUrl: env.GOOGLE_CALLBACK_URL,
+      enabled: Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET),
+    },
+    github: {
+      clientId: env.GITHUB_CLIENT_ID,
+      clientSecret: env.GITHUB_CLIENT_SECRET,
+      callbackUrl: env.GITHUB_CALLBACK_URL,
+      enabled: Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET),
+    },
+  },
+
+  // Cookie settings
+  cookie: {
+    domain: env.COOKIE_DOMAIN,
+    secure: env.COOKIE_SECURE || env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'lax' as const,
+    refreshTokenName: 'refresh_token',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
+  },
+
+  // Argon2 password hashing (OWASP recommended settings)
+  argon2: {
+    memoryCost: 65536, // 64 MB
+    timeCost: 3, // 3 iterations
+    parallelism: 4, // 4 parallel threads
+  },
+
   congress: {
     apiKey: env.CONGRESS_API_KEY,
     baseUrl: env.CONGRESS_API_BASE_URL,

@@ -26,6 +26,20 @@ async function main() {
   });
   console.log(`Created Congress: ${congress118.number}`);
 
+  // Create Congress 119 (current congress)
+  const congress119 = await prisma.congress.upsert({
+    where: { number: 119 },
+    update: {},
+    create: {
+      number: 119,
+      startDate: new Date('2025-01-03'),
+      endDate: new Date('2027-01-03'),
+      houseMajority: 'R',  // 119th Congress has Republican House majority
+      senateMajority: 'R', // and Republican Senate majority
+    },
+  });
+  console.log(`Created Congress: ${congress119.number}`);
+
   // Create sample legislators
   const legislators = await Promise.all([
     prisma.legislator.upsert({

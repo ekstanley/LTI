@@ -602,7 +602,8 @@ describe('DataTransformer', () => {
       expect(result.firstName).toBe('Test');
       expect(result.lastName).toBe('Member');
       expect(result.party).toBe('D');
-      expect(result.state).toBe('California');
+      // State names are converted to 2-char codes for database CHAR(2) column
+      expect(result.state).toBe('CA');
       expect(result.chamber).toBe('HOUSE');
       expect(result.inOffice).toBe(true);
       expect(result.dataSource).toBe('CONGRESS_GOV');
@@ -616,7 +617,8 @@ describe('DataTransformer', () => {
       };
       const result = transformMemberListItem(memberNoTerms);
       expect(result.chamber).toBe('HOUSE'); // Default
-      expect(result.state).toBe('California');
+      // State names are converted to 2-char codes for database CHAR(2) column
+      expect(result.state).toBe('CA');
     });
 
     it('parses "First Last" name format', () => {
@@ -676,7 +678,8 @@ describe('DataTransformer', () => {
       expect(result.lastName).toBe('Member');
       expect(result.fullName).toBe('Test Member');
       expect(result.party).toBe('D');
-      expect(result.state).toBe('California');
+      // State names are converted to 2-char codes for database CHAR(2) column
+      expect(result.state).toBe('CA');
       expect(result.chamber).toBe('HOUSE');
       expect(result.inOffice).toBe(true);
       expect(result.lastSyncedAt).toBeInstanceOf(Date);

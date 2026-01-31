@@ -59,29 +59,53 @@ interface CongressVoteListItem {
 }
 
 /**
+ * Congress.gov vote party total (aggregates by party)
+ */
+interface CongressVotePartyTotal {
+  nayTotal: number;
+  notVotingTotal: number;
+  party: {
+    name: string;
+    type: string;
+  };
+  presentTotal: number;
+  voteParty: string;
+  yeaTotal: number;
+}
+
+/**
  * Congress.gov roll call vote detail
+ *
+ * NOTE: Field names are based on actual API response structure.
+ * - `startDate` is the vote date (ISO 8601 format)
+ * - `voteQuestion` is the question text
+ * - `votePartyTotal` contains party-level vote aggregates
+ * - Individual member votes are NOT included in the detail response
  */
 interface CongressVoteDetail {
   congress: number;
-  chamber: string;
+  chamber?: string;
   sessionNumber: number;
   rollCallNumber: number;
-  date: string;
-  question: string;
+  // Actual API field names (not 'date' or 'question')
+  startDate: string;
+  updateDate?: string;
+  voteQuestion: string;
   description?: string;
   result: string;
   voteType?: string;
   category?: string;
-  totalYea: number;
-  totalNay: number;
-  totalPresent?: number;
-  totalNotVoting?: number;
+  // Vote counts are in votePartyTotal array, not top-level fields
+  votePartyTotal?: CongressVotePartyTotal[];
   tieBreakerVp?: string;
+  identifier?: number;
+  sourceDataURL?: string;
   bill?: {
     congress: number;
     type: string;
     number: number;
   };
+  // Note: Individual member votes require a separate API call
   members?: CongressVoteMember[];
 }
 
@@ -528,14 +552,17 @@ function transformRollCallVote(
     rollNumber: detail.rollCallNumber,
     voteType: mapVoteType(detail.voteType),
     voteCategory: mapVoteCategory(detail.category),
-    question: detail.question || detail.description || 'Unknown',
+    question: detail.voteQuestion || detail.description || 'Unknown',
     result: mapVoteResult(detail.result),
-    yeas: detail.totalYea ?? 0,
-    nays: detail.totalNay ?? 0,
-    present: detail.totalPresent ?? 0,
-    notVoting: detail.totalNotVoting ?? 0,
+    // Aggregate vote counts from votePartyTotal array
+    // NOTE: For special votes (Speaker elections), votePartyTotal may have undefined totals
+    // Use nullish coalescing inside reduce to handle undefined values safely
+    yeas: detail.votePartyTotal?.reduce((sum, p) => sum + (p.yeaTotal ?? 0), 0) ?? 0,
+    nays: detail.votePartyTotal?.reduce((sum, p) => sum + (p.nayTotal ?? 0), 0) ?? 0,
+    present: detail.votePartyTotal?.reduce((sum, p) => sum + (p.presentTotal ?? 0), 0) ?? 0,
+    notVoting: detail.votePartyTotal?.reduce((sum, p) => sum + (p.notVotingTotal ?? 0), 0) ?? 0,
     tieBreakerVp: detail.tieBreakerVp ?? null,
-    voteDate: new Date(detail.date),
+    voteDate: new Date(detail.startDate),
     dataSource: 'CONGRESS_GOV',
     lastSyncedAt: new Date(),
   };
@@ -558,14 +585,19 @@ async function upsertRollCallVote(
   }
 
   try {
+    // Extract billId and lastSyncedAt - Prisma requires relation syntax for FK
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { billId, lastSyncedAt, ...voteData } = vote;
+
     // Check if bill exists before referencing
-    if (vote.billId) {
+    let validBillId: string | null = null;
+    if (billId) {
       const billExists = await prisma.bill.findUnique({
-        where: { id: vote.billId },
+        where: { id: billId },
         select: { id: true },
       });
-      if (!billExists) {
-        vote.billId = null;
+      if (billExists) {
+        validBillId = billId;
       }
     }
 
@@ -585,13 +617,19 @@ async function upsertRollCallVote(
           nays: vote.nays,
           present: vote.present,
           notVoting: vote.notVoting,
-          // Note: RollCallVote model doesn't have lastSyncedAt field
         },
       });
       return { created: false, updated: true, skipped: false };
     }
 
-    await prisma.rollCallVote.create({ data: vote });
+    // Build create data with proper Prisma relation syntax
+    await prisma.rollCallVote.create({
+      data: {
+        ...voteData,
+        // Use relation syntax for bill connection (if bill exists)
+        ...(validBillId ? { bill: { connect: { id: validBillId } } } : {}),
+      },
+    });
     return { created: true, updated: false, skipped: false };
   } catch (error) {
     log('error', `Failed to upsert roll call ${vote.id}: ${error}`);

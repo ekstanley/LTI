@@ -171,11 +171,11 @@ export const voteService = {
    * Get recent votes by chamber
    */
   async getRecent(chamber: string, limit = 10) {
-    const prismaChambger = apiToChamber(chamber as Parameters<typeof apiToChamber>[0]);
-    if (!prismaChambger) {
+    const prismaChamber = apiToChamber(chamber as Parameters<typeof apiToChamber>[0]);
+    if (!prismaChamber) {
       return [];
     }
-    const votes = await voteRepository.findRecent(prismaChambger, limit);
+    const votes = await voteRepository.findRecent(prismaChamber, limit);
     return votes.map(mapRollCallVoteSummaryToApi);
   },
 };

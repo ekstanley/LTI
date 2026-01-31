@@ -66,7 +66,18 @@ billsRouter.get('/:id', validate(getBillSchema, 'params'), async (req, res, next
   }
 });
 
-// Get bill cosponsors
+// Get all bill sponsors (primary + cosponsors)
+billsRouter.get('/:id/sponsors', validate(getBillSchema, 'params'), async (req, res, next) => {
+  try {
+    const { id } = getBillSchema.parse(req.params);
+    const sponsors = await billService.getSponsors(id);
+    res.json({ data: sponsors });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get bill cosponsors (non-primary sponsors only)
 billsRouter.get('/:id/cosponsors', validate(getBillSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getBillSchema.parse(req.params);

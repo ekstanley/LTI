@@ -2,10 +2,10 @@
  * WebSocket Authentication Tests
  *
  * Tests for JWT token extraction and validation in WebSocket upgrade requests.
- * MVP implementation validates token format without signature verification.
+ * Uses jwtService for proper signature verification.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { IncomingMessage } from 'http';
 import { authenticateWebSocketRequest, requiresAuthentication } from '../../websocket/auth.js';
 
@@ -16,6 +16,14 @@ vi.mock('../../lib/logger.js', () => ({
     warn: vi.fn(),
     info: vi.fn(),
     error: vi.fn(),
+  },
+}));
+
+// Mock jwtService for controlled testing
+const mockVerifyAccessToken = vi.fn();
+vi.mock('../../services/jwt.service.js', () => ({
+  jwtService: {
+    verifyAccessToken: (...args: unknown[]) => mockVerifyAccessToken(...args),
   },
 }));
 
@@ -34,15 +42,11 @@ function createMockRequest(options: {
   } as IncomingMessage;
 }
 
-// Helper to create a valid JWT token structure (for format validation only)
-function createMockJwt(payload: Record<string, unknown>): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'HS256', typ: 'JWT' })).toString('base64url');
-  const payloadPart = Buffer.from(JSON.stringify(payload)).toString('base64url');
-  const signature = 'fake_signature_for_testing';
-  return `${header}.${payloadPart}.${signature}`;
-}
-
 describe('WebSocket Authentication', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('authenticateWebSocketRequest', () => {
     describe('anonymous connections', () => {
       it('allows connection without token', () => {
@@ -53,6 +57,8 @@ describe('WebSocket Authentication', () => {
         expect(result.authenticated).toBe(true);
         expect(result.userId).toBeUndefined();
         expect(result.error).toBeUndefined();
+        // jwtService should not be called for anonymous connections
+        expect(mockVerifyAccessToken).not.toHaveBeenCalled();
       });
 
       it('allows connection with empty query string', () => {
@@ -61,35 +67,38 @@ describe('WebSocket Authentication', () => {
         const result = authenticateWebSocketRequest(req);
 
         expect(result.authenticated).toBe(true);
+        expect(mockVerifyAccessToken).not.toHaveBeenCalled();
       });
     });
 
-    describe('token extraction from query string', () => {
-      it('extracts token from query string', () => {
-        const token = createMockJwt({ sub: 'user-123' });
+    describe('security - query string rejection', () => {
+      it('rejects query string tokens for security reasons', () => {
+        const token = 'valid.jwt.token';
+        // Even though token is valid, query string should be rejected
+        mockVerifyAccessToken.mockReturnValue({
+          valid: true,
+          payload: { sub: 'user-123' },
+        });
+
         const req = createMockRequest({ url: `/ws?token=${token}` });
-
         const result = authenticateWebSocketRequest(req);
 
+        // Should be treated as anonymous (no token extracted from query string)
         expect(result.authenticated).toBe(true);
-        expect(result.userId).toBe('user-123');
-      });
-
-      it('handles URL-encoded token', () => {
-        const token = createMockJwt({ sub: 'user-456' });
-        const encodedToken = encodeURIComponent(token);
-        const req = createMockRequest({ url: `/ws?token=${encodedToken}` });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(true);
-        expect(result.userId).toBe('user-456');
+        expect(result.userId).toBeUndefined();
+        // jwtService should NOT be called for query string tokens
+        expect(mockVerifyAccessToken).not.toHaveBeenCalled();
       });
     });
 
     describe('token extraction from Sec-WebSocket-Protocol header', () => {
-      it('extracts token from protocol header', () => {
-        const token = createMockJwt({ sub: 'user-789' });
+      it('extracts and verifies token from protocol header', () => {
+        const token = 'header.jwt.token';
+        mockVerifyAccessToken.mockReturnValue({
+          valid: true,
+          payload: { sub: 'user-789' },
+        });
+
         const req = createMockRequest({
           url: '/ws',
           protocol: `token.${token}`,
@@ -99,10 +108,16 @@ describe('WebSocket Authentication', () => {
 
         expect(result.authenticated).toBe(true);
         expect(result.userId).toBe('user-789');
+        expect(mockVerifyAccessToken).toHaveBeenCalledWith(token);
       });
 
       it('extracts token from multiple protocols', () => {
-        const token = createMockJwt({ sub: 'user-abc' });
+        const token = 'multi.protocol.token';
+        mockVerifyAccessToken.mockReturnValue({
+          valid: true,
+          payload: { sub: 'user-abc' },
+        });
+
         const req = createMockRequest({
           url: '/ws',
           protocol: `graphql-ws, token.${token}`,
@@ -113,119 +128,140 @@ describe('WebSocket Authentication', () => {
         expect(result.authenticated).toBe(true);
         expect(result.userId).toBe('user-abc');
       });
+    });
 
-      it('prioritizes query string over protocol header', () => {
-        const queryToken = createMockJwt({ sub: 'query-user' });
-        const headerToken = createMockJwt({ sub: 'header-user' });
-        const req = createMockRequest({
-          url: `/ws?token=${queryToken}`,
-          protocol: `token.${headerToken}`,
+    describe('token verification errors', () => {
+      it('rejects expired token', () => {
+        mockVerifyAccessToken.mockReturnValue({
+          valid: false,
+          error: 'expired',
         });
 
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.expired.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
-        expect(result.userId).toBe('query-user');
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('Token has expired');
+      });
+
+      it('rejects invalid token', () => {
+        mockVerifyAccessToken.mockReturnValue({
+          valid: false,
+          error: 'invalid',
+        });
+
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.invalid.jwt.token',
+        });
+        const result = authenticateWebSocketRequest(req);
+
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('Invalid token');
+      });
+
+      it('rejects malformed token', () => {
+        mockVerifyAccessToken.mockReturnValue({
+          valid: false,
+          error: 'malformed',
+        });
+
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.malformed',
+        });
+        const result = authenticateWebSocketRequest(req);
+
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('Malformed token');
+      });
+
+      it('rejects revoked token', () => {
+        mockVerifyAccessToken.mockReturnValue({
+          valid: false,
+          error: 'revoked',
+        });
+
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.revoked.jwt.token',
+        });
+        const result = authenticateWebSocketRequest(req);
+
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('Token has been revoked');
+      });
+
+      it('handles unknown error gracefully', () => {
+        mockVerifyAccessToken.mockReturnValue({
+          valid: false,
+          error: 'unknown_error',
+        });
+
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.some.jwt.token',
+        });
+        const result = authenticateWebSocketRequest(req);
+
+        expect(result.authenticated).toBe(false);
+        expect(result.error).toBe('Authentication failed');
       });
     });
 
-    describe('token format validation', () => {
-      it('rejects token with less than 3 parts', () => {
-        const req = createMockRequest({ url: '/ws?token=invalid.token' });
+    describe('valid token verification', () => {
+      it('extracts userId from verified payload', () => {
+        mockVerifyAccessToken.mockReturnValue({
+          valid: true,
+          payload: { sub: 'verified-user-id', email: 'test@example.com' },
+        });
 
+        const req = createMockRequest({
+          url: '/ws',
+          protocol: 'token.valid.jwt.token',
+        });
         const result = authenticateWebSocketRequest(req);
 
-        expect(result.authenticated).toBe(false);
-        expect(result.error).toBe('Invalid token format');
-      });
-
-      it('rejects token with more than 3 parts', () => {
-        const req = createMockRequest({ url: '/ws?token=a.b.c.d' });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(false);
-        expect(result.error).toBe('Invalid token format');
-      });
-
-      it('rejects token with empty parts', () => {
-        const req = createMockRequest({ url: '/ws?token=header..signature' });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(false);
-        expect(result.error).toBe('Invalid token format');
-      });
-
-      it('rejects token with invalid base64url characters', () => {
-        const req = createMockRequest({ url: '/ws?token=header!.payload@.signature#' });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(false);
-        expect(result.error).toBe('Invalid token format');
-      });
-    });
-
-    describe('user ID extraction', () => {
-      it('extracts userId from sub claim', () => {
-        const token = createMockJwt({ sub: 'user-from-sub' });
-        const req = createMockRequest({ url: `/ws?token=${token}` });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.userId).toBe('user-from-sub');
-      });
-
-      it('extracts userId from userId claim', () => {
-        const token = createMockJwt({ userId: 'user-from-claim' });
-        const req = createMockRequest({ url: `/ws?token=${token}` });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.userId).toBe('user-from-claim');
-      });
-
-      it('prefers sub over userId when both present', () => {
-        const token = createMockJwt({ sub: 'from-sub', userId: 'from-userId' });
-        const req = createMockRequest({ url: `/ws?token=${token}` });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.userId).toBe('from-sub');
-      });
-
-      it('rejects token with no user identifier', () => {
-        const token = createMockJwt({ name: 'Test User', email: 'test@example.com' });
-        const req = createMockRequest({ url: `/ws?token=${token}` });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(false);
-        expect(result.error).toBe('Invalid token payload');
-      });
-
-      it('handles malformed JSON payload gracefully', () => {
-        // Create token with valid base64url but invalid JSON
-        const header = Buffer.from('{"alg":"HS256"}').toString('base64url');
-        const invalidPayload = Buffer.from('not-json').toString('base64url');
-        const signature = 'signature';
-        const token = `${header}.${invalidPayload}.${signature}`;
-
-        const req = createMockRequest({ url: `/ws?token=${token}` });
-
-        const result = authenticateWebSocketRequest(req);
-
-        expect(result.authenticated).toBe(false);
-        expect(result.error).toBe('Invalid token payload');
+        expect(result.authenticated).toBe(true);
+        expect(result.userId).toBe('verified-user-id');
       });
     });
   });
 
   describe('requiresAuthentication', () => {
-    it('returns false for all rooms in MVP', () => {
-      expect(requiresAuthentication('bill:hr-1234')).toBe(false);
-      expect(requiresAuthentication('vote:abc123')).toBe(false);
-      expect(requiresAuthentication('user:private-room')).toBe(false);
+    describe('public rooms', () => {
+      it('returns false for bill rooms', () => {
+        expect(requiresAuthentication('bill:hr-1234')).toBe(false);
+        expect(requiresAuthentication('bill:s-5678')).toBe(false);
+      });
+
+      it('returns false for vote rooms', () => {
+        expect(requiresAuthentication('vote:abc123')).toBe(false);
+        expect(requiresAuthentication('vote:xyz789')).toBe(false);
+      });
+
+      it('returns false for legislator rooms', () => {
+        expect(requiresAuthentication('legislator:L000123')).toBe(false);
+      });
+    });
+
+    describe('protected rooms', () => {
+      it('returns true for user rooms', () => {
+        expect(requiresAuthentication('user:private-room')).toBe(true);
+        expect(requiresAuthentication('user:user-123')).toBe(true);
+      });
+
+      it('returns true for saved items rooms', () => {
+        expect(requiresAuthentication('saved:bills')).toBe(true);
+        expect(requiresAuthentication('saved:votes')).toBe(true);
+      });
+
+      it('returns true for notifications rooms', () => {
+        expect(requiresAuthentication('notifications:user-123')).toBe(true);
+      });
     });
   });
 });

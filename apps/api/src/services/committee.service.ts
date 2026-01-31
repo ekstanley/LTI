@@ -159,15 +159,15 @@ export const committeeService = {
    * Get standing committees by chamber
    */
   async getStandingCommittees(chamber?: string) {
-    let prismaChambger: Chamber | undefined;
+    let prismaChamber: Chamber | undefined;
     if (chamber) {
       const mapped = apiToChamber(chamber as Parameters<typeof apiToChamber>[0]);
       if (mapped) {
-        prismaChambger = mapped;
+        prismaChamber = mapped;
       }
     }
 
-    const committees = await committeeRepository.findStandingCommittees(prismaChambger);
+    const committees = await committeeRepository.findStandingCommittees(prismaChamber);
 
     return committees.map((c) => ({
       id: c.id,

@@ -1,77 +1,86 @@
 /**
  * WebSocket Authentication
  *
- * MVP: Token format validation and user extraction stub.
- * Full JWT verification will be implemented in Phase 2.
+ * Validates JWT tokens for WebSocket connections using the jwtService.
+ * Provides proper signature verification and expiration checking.
  *
- * Token can be provided via:
- * - Query string: ws://host/ws?token=xxx
- * - Sec-WebSocket-Protocol header
+ * Token must be provided via Sec-WebSocket-Protocol header: token.<jwt>
+ * Query string tokens are NOT supported for security reasons (logs, history).
  */
 
 import type { IncomingMessage } from 'http';
+import { jwtService } from '../services/jwt.service.js';
 import { logger } from '../lib/logger.js';
 
-export interface AuthResult {
-  authenticated: boolean;
-  userId?: string;
-  error?: string;
-}
+/**
+ * Authentication result - uses discriminated union to prevent illegal states
+ *
+ * Valid states:
+ * - Authenticated user: { authenticated: true, userId: string }
+ * - Anonymous connection: { authenticated: true } (no userId)
+ * - Authentication failed: { authenticated: false, error: string }
+ */
+export type AuthResult =
+  | { authenticated: true; userId: string; error?: never }
+  | { authenticated: true; userId?: undefined; error?: never }
+  | { authenticated: false; userId?: never; error: string };
 
 /**
- * Extract and validate token from WebSocket upgrade request
+ * Extract and validate JWT from WebSocket upgrade request
  *
- * Phase 2 TODO: Implement actual JWT verification with jsonwebtoken
+ * Uses jwtService for proper JWT signature verification.
  */
 export function authenticateWebSocketRequest(req: IncomingMessage): AuthResult {
   const token = extractToken(req);
 
-  // No token = anonymous connection (allowed for MVP)
+  // No token = anonymous connection (allowed for public data)
   if (!token) {
     logger.debug('WebSocket connection without token (anonymous)');
     return { authenticated: true };
   }
 
-  // Validate token format (JWT: header.payload.signature)
-  if (!isValidTokenFormat(token)) {
-    logger.warn('Invalid WebSocket token format');
+  // Verify token using jwtService (proper signature verification)
+  const verification = jwtService.verifyAccessToken(token);
+
+  if (!verification.valid) {
+    const errorMessages: Record<string, string> = {
+      expired: 'Token has expired',
+      invalid: 'Invalid token',
+      malformed: 'Malformed token',
+      revoked: 'Token has been revoked',
+    };
+
+    const errorMessage = errorMessages[verification.error] ?? 'Authentication failed';
+    logger.warn({ error: verification.error }, 'WebSocket authentication failed');
+
     return {
       authenticated: false,
-      error: 'Invalid token format',
+      error: errorMessage,
     };
   }
 
-  // MVP: Extract user ID from token payload without verification
-  // Phase 2: Add actual JWT verification here
-  const userId = extractUserIdFromToken(token);
+  // Token is valid - extract userId from verified payload
+  const userId = verification.payload.sub;
 
-  if (userId) {
-    logger.debug({ userId }, 'WebSocket authenticated');
-    return {
-      authenticated: true,
-      userId,
-    };
-  }
-
+  logger.debug({ userId }, 'WebSocket authenticated');
   return {
-    authenticated: false,
-    error: 'Invalid token payload',
+    authenticated: true,
+    userId,
   };
 }
 
 /**
- * Extract token from request
- * Priority: 1) Query string, 2) Sec-WebSocket-Protocol
+ * Extract token from Sec-WebSocket-Protocol header
+ *
+ * SECURITY: Query string tokens are explicitly NOT supported because they:
+ * - Appear in server access logs
+ * - Are stored in browser history
+ * - Are visible to proxies and CDNs
+ * - Can leak via Referrer headers
+ * - May be captured by analytics tools
  */
 function extractToken(req: IncomingMessage): string | null {
-  // Try query string first
-  const url = new URL(req.url ?? '', `http://${req.headers.host}`);
-  const queryToken = url.searchParams.get('token');
-  if (queryToken) {
-    return queryToken;
-  }
-
-  // Try Sec-WebSocket-Protocol header (custom subprotocol pattern)
+  // Extract token from Sec-WebSocket-Protocol header (custom subprotocol pattern)
   const protocols = req.headers['sec-websocket-protocol'];
   if (protocols) {
     const protocolList = protocols.split(',').map((p) => p.trim());
@@ -85,50 +94,18 @@ function extractToken(req: IncomingMessage): string | null {
 }
 
 /**
- * Check if token has valid JWT format (3 base64url segments)
- */
-function isValidTokenFormat(token: string): boolean {
-  const parts = token.split('.');
-  if (parts.length !== 3) {
-    return false;
-  }
-
-  // Each part should be valid base64url
-  const base64urlRegex = /^[A-Za-z0-9_-]+$/;
-  return parts.every((part) => part.length > 0 && base64urlRegex.test(part));
-}
-
-/**
- * Extract user ID from JWT payload (without verification)
+ * Check if a connection requires authentication for a specific room
  *
- * WARNING: This does NOT verify the signature!
- * Phase 2: Replace with proper JWT verification
+ * Returns true for rooms that contain user-specific or sensitive data.
+ * Anonymous connections are denied for these rooms.
  */
-function extractUserIdFromToken(token: string): string | null {
-  try {
-    const parts = token.split('.');
-    const payloadPart = parts[1];
-    if (!payloadPart) {
-      return null;
-    }
-    const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString()) as {
-      sub?: string;
-      userId?: string;
-    };
+export function requiresAuthentication(room: string): boolean {
+  // Rooms requiring authentication (user-specific data)
+  const authenticatedRooms = [
+    /^user:/,           // User-specific rooms
+    /^saved:/,          // Saved items/preferences
+    /^notifications:/,  // User notifications
+  ];
 
-    return payload.sub ?? payload.userId ?? null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Check if a connection requires authentication
- * MVP: All connections allowed (anonymous or authenticated)
- * Phase 2: Configure required auth for certain rooms
- */
-export function requiresAuthentication(_room: string): boolean {
-  // MVP: No rooms require authentication
-  // Phase 2: Implement room-based auth requirements
-  return false;
+  return authenticatedRooms.some((pattern) => pattern.test(room));
 }

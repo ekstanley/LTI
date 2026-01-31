@@ -116,6 +116,23 @@ legislatorsRouter.get(
   }
 );
 
+// Alias: voting-record -> votes (for API consistency)
+legislatorsRouter.get(
+  '/:id/voting-record',
+  validate(getLegislatorSchema, 'params'),
+  validate(legislatorVotesSchema, 'query'),
+  async (req, res, next) => {
+    try {
+      const { id } = getLegislatorSchema.parse(req.params);
+      const { limit, offset } = legislatorVotesSchema.parse(req.query);
+      const result = await legislatorService.getVotes(id, limit, offset);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // Get legislator's statistics
 legislatorsRouter.get('/:id/stats', validate(getLegislatorSchema, 'params'), async (req, res, next) => {
   try {

@@ -14,3 +14,21 @@ export {
   type CommitteeSummaryDto,
   type CommitteeMemberDto,
 } from './committee.service.js';
+export {
+  jwtService,
+  type JwtService,
+  type AccessTokenPayload,
+  type RefreshTokenPayload,
+  type TokenPair,
+  type TokenVerificationResult,
+} from './jwt.service.js';
+export { passwordService, type PasswordService, type PasswordVerifyResult } from './password.service.js';
+export {
+  authService,
+  type AuthService,
+  type RegisterInput,
+  type LoginInput,
+  type RegisterResponse,
+  type LoginResponse,
+  type RefreshResponse,
+} from './auth.service.js';

@@ -18,6 +18,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [0.8.0] - 2026-01-29
+
+### Added
+- **WP8 Historical Data Execution - COMPLETE**:
+  - **Votes Import Execution**: Congress 119 House votes fully imported (1,117 votes)
+  - **Database Verification Script (`count-votes.ts`)**:
+    - Real-time vote count verification against checkpoint
+    - Breakdown by Congress number
+    - Monorepo-compatible dotenv path resolution
+  - **QC Documentation**: 8 frontend screenshots captured (`docs/screenshots/2026-01-29/`)
+
+### Fixed
+- **WP8-BUG7: Prisma billId Relation Syntax (`import-votes.ts`)**:
+  - Changed `billId: matchingBill.id` to `billId: { connect: { id: matchingBill.id } }`
+  - Prisma v5+ requires explicit relation connect syntax for foreign keys
+- **WP8-BUG8: NaN Vote Totals (`data-transformer.ts`, `import-votes.ts`)**:
+  - Added nullish coalescing (`?? 0`) to `reduce()` callbacks
+  - Prevents NaN when `votePartyTotal` array is empty or missing values
+  - Affected fields: yeas, nays, present, notVoting
+
+### Technical Details
+- **Import Results (Final)**:
+  - Roll calls created: 974
+  - Roll calls updated: 142
+  - Roll calls skipped: 8 (no bill match)
+  - Total processed: 1,116 records
+  - Duration: ~62 minutes
+  - Error rate: 0.07% (1 error out of 1,116)
+- **Database Record Counts**:
+  - Legislators: 2,688
+  - Committees: 809
+  - Bills: 13,674
+  - Roll Call Votes: 1,117
+- **API Endpoints Verified**: 31 endpoints across 7 route files
+- **Test Suite**: 349 tests passing (15 test files)
+- **TypeScript**: All packages pass type check (api, web, shared)
+- **Completed Phases**: legislators, committees, bills, votes
+
+### QC Verification
+- Frontend screenshots: 8 pages captured
+- API health: Responding on port 4000
+- Web frontend: Responding on port 3001
+- All services operational
+
+---
+
 ## [0.7.0] - 2026-01-28
 
 ### Added
@@ -420,6 +466,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 | 0.5.1 | 2026-01-28 | Phase 1 gap analysis and work packages defined |
 | 0.6.0 | 2026-01-28 | Phase 1 data ingestion core complete (WP3-A) |
 | 0.7.0 | 2026-01-28 | Phase 1 historical data load complete (WP7-A) |
+| 0.8.0 | 2026-01-29 | WP8 historical data execution complete (1,117 votes) |
 | 1.0.0 | TBD | Phase 1 complete - MVP release |
 | 1.1.0 | TBD | Phase 2 ML infrastructure complete |
 | 1.2.0 | TBD | Phase 2 analysis models complete |
