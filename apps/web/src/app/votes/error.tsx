@@ -16,7 +16,11 @@ interface ErrorProps {
 
 export default function VotesError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('Votes route error:', error);
+    // Only log errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Votes route error:', error);
+    }
+    // TODO: Send to monitoring service (Sentry, LogRocket, etc.) in production
   }, [error]);
 
   return (

@@ -6,14 +6,21 @@
  */
 
 import { Router, type Router as RouterType, type Request } from 'express';
-import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/auth.js';
+import { authRateLimiter } from '../middleware/authRateLimiter.js';
 import { ApiError } from '../middleware/error.js';
 import { authService } from '../services/auth.service.js';
 import { oauthService } from '../services/oauth.service.js';
 import { validateRedirectUrl } from '../middleware/validateRedirectUrl.js';
 import { config } from '../config.js';
+import {
+  registerSchema,
+  loginSchema,
+  updateProfileSchema,
+  changePasswordSchema,
+  revokeSessionSchema,
+} from '../schemas/auth.schema.js';
 
 export const authRouter: RouterType = Router();
 
@@ -50,12 +57,6 @@ function getClientMetadata(req: Request): { userAgent?: string; ipAddress?: stri
 // Registration
 // =============================================================================
 
-const registerSchema = z.object({
-  email: z.string().email('Invalid email format').max(255),
-  password: z.string().min(8).max(128),
-  name: z.string().max(100).optional(),
-});
-
 /**
  * POST /api/v1/auth/register
  *
@@ -64,7 +65,7 @@ const registerSchema = z.object({
  * @body {email, password, name?}
  * @returns {user, accessToken, expiresAt}
  */
-authRouter.post('/register', validate(registerSchema), async (req, res, next) => {
+authRouter.post('/register', authRateLimiter, validate(registerSchema), async (req, res, next) => {
   try {
     const parsed = registerSchema.parse(req.body);
 
@@ -115,11 +116,6 @@ authRouter.post('/register', validate(registerSchema), async (req, res, next) =>
 // Login
 // =============================================================================
 
-const loginSchema = z.object({
-  email: z.string().email('Invalid email format'),
-  password: z.string().min(1, 'Password is required'),
-});
-
 /**
  * POST /api/v1/auth/login
  *
@@ -128,7 +124,7 @@ const loginSchema = z.object({
  * @body {email, password}
  * @returns {user, accessToken, expiresAt}
  */
-authRouter.post('/login', validate(loginSchema), async (req, res, next) => {
+authRouter.post('/login', authRateLimiter, validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     const metadata = getClientMetadata(req);
@@ -145,7 +141,7 @@ authRouter.post('/login', validate(loginSchema), async (req, res, next) => {
         account_inactive: { status: 403, message: 'Account is inactive' },
         account_locked: {
           status: 429,
-          message: 'Account temporarily locked due to too many failed login attempts. Please try again later.',
+          message: 'Too many requests. Please try again later.',
         },
         internal: { status: 500, message: 'Login failed' },
       };
@@ -314,11 +310,6 @@ authRouter.get('/me', requireAuth, async (req, res, next) => {
   }
 });
 
-const updateProfileSchema = z.object({
-  name: z.string().max(100).optional(),
-  avatarUrl: z.string().url().max(500).nullable().optional(),
-});
-
 /**
  * PATCH /api/v1/auth/me
  *
@@ -355,11 +346,6 @@ authRouter.patch('/me', requireAuth, validate(updateProfileSchema), async (req, 
 // =============================================================================
 // Password Management
 // =============================================================================
-
-const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string().min(8).max(128),
-});
 
 /**
  * POST /api/v1/auth/change-password
@@ -420,10 +406,6 @@ authRouter.get('/sessions', requireAuth, async (req, res, next) => {
   } catch (error) {
     next(error);
   }
-});
-
-const revokeSessionSchema = z.object({
-  sessionId: z.string().min(1),
 });
 
 /**

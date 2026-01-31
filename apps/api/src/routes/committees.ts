@@ -1,18 +1,10 @@
 import { Router, type Router as RouterType } from 'express';
-import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import { ApiError } from '../middleware/error.js';
 import { committeeService } from '../services/index.js';
+import { listCommitteesSchema, standingCommitteesSchema, getCommitteeSchema, committeeMembersSchema, committeeReferralsSchema } from '../schemas/committees.schema.js';
 
 export const committeesRouter: RouterType = Router();
-
-const listCommitteesSchema = z.object({
-  chamber: z.enum(['house', 'senate', 'joint']).optional(),
-  type: z.enum(['standing', 'select', 'special', 'subcommittee']).optional(),
-  parentId: z.string().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 
 // Get all committees with filtering and pagination
 committeesRouter.get('/', validate(listCommitteesSchema, 'query'), async (req, res, next) => {
@@ -32,10 +24,6 @@ committeesRouter.get('/', validate(listCommitteesSchema, 'query'), async (req, r
 });
 
 // Get standing committees by chamber
-const standingCommitteesSchema = z.object({
-  chamber: z.enum(['house', 'senate']).optional(),
-});
-
 committeesRouter.get('/standing', validate(standingCommitteesSchema, 'query'), async (req, res, next) => {
   try {
     const validated = standingCommitteesSchema.parse(req.query);
@@ -47,10 +35,7 @@ committeesRouter.get('/standing', validate(standingCommitteesSchema, 'query'), a
 });
 
 // Get single committee by ID
-const getCommitteeSchema = z.object({
-  id: z.string().min(1),
-});
-
+// ID validation: alphanumeric, dash, underscore only (prevents injection attacks)
 committeesRouter.get('/:id', validate(getCommitteeSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getCommitteeSchema.parse(req.params);
@@ -78,10 +63,6 @@ committeesRouter.get('/:id/subcommittees', validate(getCommitteeSchema, 'params'
 });
 
 // Get committee members
-const committeeMembersSchema = z.object({
-  includeHistorical: z.coerce.boolean().default(false),
-});
-
 committeesRouter.get(
   '/:id/members',
   validate(getCommitteeSchema, 'params'),
@@ -99,11 +80,6 @@ committeesRouter.get(
 );
 
 // Get bills referred to committee
-const committeeReferralsSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
 committeesRouter.get(
   '/:id/bills',
   validate(getCommitteeSchema, 'params'),

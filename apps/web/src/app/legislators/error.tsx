@@ -16,7 +16,11 @@ interface ErrorProps {
 
 export default function LegislatorsError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('Legislators route error:', error);
+    // Only log errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Legislators route error:', error);
+    }
+    // TODO: Send to monitoring service (Sentry, LogRocket, etc.) in production
   }, [error]);
 
   return (
