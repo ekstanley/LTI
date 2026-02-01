@@ -9,8 +9,9 @@
  */
 
 import type { IncomingMessage } from 'http';
-import { jwtService } from '../services/jwt.service.js';
+
 import { logger } from '../lib/logger.js';
+import { jwtService } from '../services/jwt.service.js';
 
 /**
  * Authentication result - uses discriminated union to prevent illegal states

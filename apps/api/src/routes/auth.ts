@@ -6,14 +6,13 @@
  */
 
 import { Router, type Router as RouterType, type Request } from 'express';
-import { validate } from '../middleware/validate.js';
+
+import { config } from '../config.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authRateLimiter } from '../middleware/authRateLimiter.js';
 import { ApiError } from '../middleware/error.js';
-import { authService } from '../services/auth.service.js';
-import { oauthService } from '../services/oauth.service.js';
+import { validate } from '../middleware/validate.js';
 import { validateRedirectUrl } from '../middleware/validateRedirectUrl.js';
-import { config } from '../config.js';
 import {
   registerSchema,
   loginSchema,
@@ -21,6 +20,8 @@ import {
   changePasswordSchema,
   revokeSessionSchema,
 } from '../schemas/auth.schema.js';
+import { authService } from '../services/auth.service.js';
+import { oauthService } from '../services/oauth.service.js';
 
 export const authRouter: RouterType = Router();
 
@@ -183,6 +184,7 @@ authRouter.post('/login', authRateLimiter, validate(loginSchema), async (req, re
  */
 authRouter.post('/refresh', async (req, res, next) => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
 
     if (!refreshToken) {
@@ -194,6 +196,7 @@ authRouter.post('/refresh', async (req, res, next) => {
     }
 
     const metadata = getClientMetadata(req);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const result = await authService.refresh(refreshToken, metadata);
 
     if (!result.success) {
@@ -242,9 +245,11 @@ authRouter.post('/refresh', async (req, res, next) => {
  */
 authRouter.post('/logout', async (req, res, next) => {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
     const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
 
     if (refreshToken) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await authService.logout(refreshToken);
     }
 
@@ -502,9 +507,10 @@ authRouter.get('/google/callback', async (req, res, next) => {
 
     // Handle OAuth errors from provider
     if (oauthError) {
+      const errorMessage = typeof oauthError === 'string' ? oauthError : 'Unknown OAuth error';
       res.status(400).json({
         error: 'oauth_error',
-        message: `OAuth error: ${oauthError}`,
+        message: `OAuth error: ${errorMessage}`,
       });
       return;
     }
@@ -601,9 +607,10 @@ authRouter.get('/github/callback', async (req, res, next) => {
 
     // Handle OAuth errors from provider
     if (oauthError) {
+      const errorMessage = typeof oauthError === 'string' ? oauthError : 'Unknown OAuth error';
       res.status(400).json({
         error: 'oauth_error',
-        message: `OAuth error: ${oauthError}`,
+        message: `OAuth error: ${errorMessage}`,
       });
       return;
     }

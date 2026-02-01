@@ -6,11 +6,8 @@
  */
 
 import type { Bill, PaginatedResponse } from '@ltip/shared';
-import {
-  billRepository,
-  type BillFilters,
-  type PaginationParams,
-} from '../repositories/index.js';
+import type { BillType, Chamber } from '@prisma/client';
+
 import {
   mapBillToApi,
   mapBillSummaryToApi,
@@ -20,7 +17,11 @@ import {
   partyToApi,
   chamberToApi,
 } from '../mappers/index.js';
-import type { BillType, Chamber } from '@prisma/client';
+import {
+  billRepository,
+  type BillFilters,
+  type PaginationParams,
+} from '../repositories/index.js';
 
 /**
  * Parameters for listing bills

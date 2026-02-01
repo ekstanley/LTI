@@ -18,14 +18,15 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
+
+import { config } from '../config.js';
+import { logger } from '../lib/logger.js';
+import { ApiError } from '../middleware/error.js';
 import {
   validateCsrfToken,
   invalidateCsrfToken,
   generateCsrfToken,
 } from '../services/csrf.service.js';
-import { logger } from '../lib/logger.js';
-import { config } from '../config.js';
-import { ApiError } from '../middleware/error.js';
 import { hasSession } from '../utils/type-guards.js';
 
 /**

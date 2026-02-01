@@ -11,6 +11,7 @@
  */
 
 import { Redis } from 'ioredis';
+
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 
@@ -49,34 +50,37 @@ class MemoryCache {
     this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
   }
 
-  async get(key: string): Promise<string | null> {
+  get(key: string): Promise<string | null> {
     const entry = this.cache.get(key);
-    if (!entry) return null;
+    if (!entry) return Promise.resolve(null);
     if (Date.now() > entry.expiresAt) {
       this.cache.delete(key);
-      return null;
+      return Promise.resolve(null);
     }
-    return entry.value;
+    return Promise.resolve(entry.value);
   }
 
-  async set(key: string, value: string, ttlSeconds?: number): Promise<void> {
+  set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     const expiresAt = Date.now() + (ttlSeconds ?? DEFAULT_TTL.CACHE) * 1000;
     this.cache.set(key, { value, expiresAt });
+    return Promise.resolve();
   }
 
-  async del(key: string): Promise<void> {
+  del(key: string): Promise<void> {
     this.cache.delete(key);
+    return Promise.resolve();
   }
 
-  async keys(pattern: string): Promise<string[]> {
+  keys(pattern: string): Promise<string[]> {
     const regex = new RegExp(
       '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
     );
-    return Array.from(this.cache.keys()).filter((key) => regex.test(key));
+    return Promise.resolve(Array.from(this.cache.keys()).filter((key) => regex.test(key)));
   }
 
-  async flushAll(): Promise<void> {
+  flushAll(): Promise<void> {
     this.cache.clear();
+    return Promise.resolve();
   }
 
   private cleanup(): void {

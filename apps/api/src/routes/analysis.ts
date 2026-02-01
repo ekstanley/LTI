@@ -1,14 +1,15 @@
-import { Router, type Router as RouterType } from 'express';
-import { validate } from '../middleware/validate.js';
-import { ApiError } from '../middleware/error.js';
 import type { BillAnalysis } from '@ltip/shared';
+import { Router, type Router as RouterType } from 'express';
+
+import { ApiError } from '../middleware/error.js';
+import { validate } from '../middleware/validate.js';
 import { getAnalysisSchema } from '../schemas/analysis.schema.js';
 
 export const analysisRouter: RouterType = Router();
 
 // Get analysis by bill ID
 // ID validation: alphanumeric, dash, underscore only (prevents injection attacks)
-analysisRouter.get('/:billId', validate(getAnalysisSchema, 'params'), async (_req, res, next) => {
+analysisRouter.get('/:billId', validate(getAnalysisSchema, 'params'), (_req, res, next) => {
   try {
     // TODO: Replace with actual database query when analysis service is implemented
     const analysis: BillAnalysis | null = null;
@@ -24,7 +25,7 @@ analysisRouter.get('/:billId', validate(getAnalysisSchema, 'params'), async (_re
 });
 
 // Request new analysis (triggers AI processing)
-analysisRouter.post('/:billId/generate', validate(getAnalysisSchema, 'params'), async (req, res, next) => {
+analysisRouter.post('/:billId/generate', validate(getAnalysisSchema, 'params'), (req, res, next) => {
   try {
     const { billId } = req.params;
 

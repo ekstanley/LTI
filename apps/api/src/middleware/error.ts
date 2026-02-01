@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction, ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
+
 import { logger } from '../lib/logger.js';
 
 export class ApiError extends Error {

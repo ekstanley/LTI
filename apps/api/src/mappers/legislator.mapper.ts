@@ -14,7 +14,9 @@
  */
 
 import type { Legislator } from '@ltip/shared';
+
 import type { LegislatorSummary, LegislatorWithRelations } from '../repositories/legislator.repository.js';
+
 import { partyToApi, chamberToApi } from './enums.js';
 
 /**

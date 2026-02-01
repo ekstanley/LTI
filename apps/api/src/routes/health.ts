@@ -1,4 +1,5 @@
 import { Router, type Router as RouterType } from 'express';
+
 import { config } from '../config.js';
 import { getStats as getWsStats } from '../websocket/index.js';
 
@@ -13,7 +14,7 @@ healthRouter.get('/', (_req, res) => {
   });
 });
 
-healthRouter.get('/ready', async (_req, res) => {
+healthRouter.get('/ready', (_req, res) => {
   // TODO: Add database and Redis connectivity checks
   const checks = {
     database: true, // Placeholder

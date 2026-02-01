@@ -6,13 +6,7 @@
  */
 
 import type { Legislator, PaginatedResponse } from '@ltip/shared';
-import {
-  legislatorRepository,
-  billRepository,
-  voteRepository,
-  type LegislatorFilters,
-  type PaginationParams,
-} from '../repositories/index.js';
+
 import {
   mapLegislatorToApi,
   mapLegislatorSummaryToApi,
@@ -23,6 +17,13 @@ import {
   chamberToApi,
   votePositionToApi,
 } from '../mappers/index.js';
+import {
+  legislatorRepository,
+  billRepository,
+  voteRepository,
+  type LegislatorFilters,
+  type PaginationParams,
+} from '../repositories/index.js';
 
 /**
  * Parameters for listing legislators

@@ -12,7 +12,9 @@
  */
 
 import type { Bill, Legislator } from '@ltip/shared';
+
 import type { BillSummary, BillWithRelations } from '../repositories/bill.repository.js';
+
 import { billTypeToApi, billStatusToApi, billTypeToChamber, chamberToApi, partyToApi } from './enums.js';
 
 /**

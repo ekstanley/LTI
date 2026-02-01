@@ -8,6 +8,7 @@ export function validate<T extends z.ZodType>(
   location: RequestLocation = 'body'
 ) {
   return (req: Request, res: Response, next: NextFunction) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const data = req[location];
     const result = schema.safeParse(data);
 
@@ -26,6 +27,7 @@ export function validate<T extends z.ZodType>(
     }
 
     // Replace with parsed (and transformed) data
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     req[location] = result.data;
     next();
   };

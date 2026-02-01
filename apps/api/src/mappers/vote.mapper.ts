@@ -14,11 +14,13 @@
  */
 
 import type { Vote, VotePosition as ApiVotePosition, LegislatorVote } from '@ltip/shared';
+
 import type {
   RollCallVoteSummary,
   RollCallVoteWithRelations,
   VoteWithLegislator,
 } from '../repositories/vote.repository.js';
+
 import { chamberToApi, voteResultToApi, votePositionToApi, billTypeToApi } from './enums.js';
 
 /**

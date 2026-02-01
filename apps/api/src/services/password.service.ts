@@ -7,8 +7,10 @@
  * @see https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
  */
 
-import argon2 from 'argon2';
 import { randomInt } from 'crypto';
+
+import argon2 from 'argon2';
+
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 
@@ -122,7 +124,7 @@ export const passwordService = {
       errors.push('Password must contain at least one digit');
     }
 
-    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(password)) {
+    if (!/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
       errors.push('Password must contain at least one special character');
     }
 

@@ -9,8 +9,10 @@
  */
 
 import { Prisma, Chamber, VoteCategory, VotePosition, VoteResult } from '@prisma/client';
+
 import { prisma } from '../db/client.js';
 import { DEFAULT_TTL } from '../db/redis.js';
+
 import {
   BaseRepository,
   PaginationParams,

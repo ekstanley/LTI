@@ -1,9 +1,10 @@
 import { Router, type Router as RouterType } from 'express';
-import { validate } from '../middleware/validate.js';
-import { validateBillIdParam } from '../middleware/routeValidation.js';
+
 import { ApiError } from '../middleware/error.js';
-import { billService } from '../services/index.js';
+import { validateBillIdParam } from '../middleware/routeValidation.js';
+import { validate } from '../middleware/validate.js';
 import { listBillsSchema, getBillSchema, relatedBillsQuerySchema } from '../schemas/bills.schema.js';
+import { billService } from '../services/index.js';
 
 export const billsRouter: RouterType = Router();
 

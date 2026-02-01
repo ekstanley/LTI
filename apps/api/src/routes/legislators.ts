@@ -1,9 +1,10 @@
 import { Router, type Router as RouterType } from 'express';
-import { validate } from '../middleware/validate.js';
-import { validateLegislatorIdParam } from '../middleware/routeValidation.js';
+
 import { ApiError } from '../middleware/error.js';
-import { legislatorService } from '../services/index.js';
+import { validateLegislatorIdParam } from '../middleware/routeValidation.js';
+import { validate } from '../middleware/validate.js';
 import { listLegislatorsSchema, getLegislatorSchema, legislatorBillsSchema, legislatorVotesSchema } from '../schemas/legislators.schema.js';
+import { legislatorService } from '../services/index.js';
 
 export const legislatorsRouter: RouterType = Router();
 
