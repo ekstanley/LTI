@@ -19,10 +19,10 @@ import {
   ThumbsUp,
   ThumbsDown,
   Minus,
-  X,
 } from 'lucide-react';
 import { useVotes } from '@/hooks';
 import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
+import { VoteFilters } from '@/components/VoteFilters';
 import type { VotesQueryParams } from '@/lib/api';
 import {
   VOTE_RESULT_LABELS,
@@ -250,16 +250,6 @@ export function VotesPageClient() {
   }, []); // Empty deps: set up interval once on mount, cleanup on unmount
 
   // Handlers
-  const handleChamberChange = useCallback((value: ChamberFilter) => {
-    setFilters((prev) => ({ ...prev, chamber: value }));
-    setPage(1);
-  }, []);
-
-  const handleResultChange = useCallback((value: ResultFilter) => {
-    setFilters((prev) => ({ ...prev, result: value }));
-    setPage(1);
-  }, []);
-
   const handleClearFilters = useCallback(() => {
     setFilters({ chamber: '', result: '' });
     setPage(1);
@@ -312,38 +302,16 @@ export function VotesPageClient() {
           </div>
 
           {/* Filters */}
-          <div className="mb-6 flex flex-wrap items-center gap-2">
-            <select
-              value={filters.chamber}
-              onChange={(e) => handleChamberChange(e.target.value as ChamberFilter)}
-              className="input w-auto"
-            >
-              <option value="">All Chambers</option>
-              <option value="house">House</option>
-              <option value="senate">Senate</option>
-            </select>
-
-            <select
-              value={filters.result}
-              onChange={(e) => handleResultChange(e.target.value as ResultFilter)}
-              className="input w-auto"
-            >
-              <option value="">All Results</option>
-              <option value="passed">Passed</option>
-              <option value="failed">Failed</option>
-              <option value="agreed_to">Agreed To</option>
-              <option value="rejected">Rejected</option>
-            </select>
-
-            {hasActiveFilters && (
-              <button
-                onClick={handleClearFilters}
-                className="btn-outline text-red-600 hover:text-red-700"
-              >
-                <X className="mr-1 h-4 w-4" />
-                Clear
-              </button>
-            )}
+          <div className="mb-6 flex flex-wrap items-center gap-4">
+            <VoteFilters
+              filters={filters}
+              onChange={(newFilters) => {
+                setFilters(newFilters);
+                setPage(1);
+              }}
+              onClear={handleClearFilters}
+              isLoading={isLoading}
+            />
 
             {/* Last updated timestamp */}
             <div className="ml-auto text-sm text-gray-500">

@@ -6,21 +6,18 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { Search, X } from 'lucide-react';
 import { useBills, useDebounce } from '@/hooks';
 import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
 import { BillCard } from '@/components/bills';
+import { BillFilters } from '@/components/BillFilters';
 import type { BillsQueryParams } from '@/lib/api';
 
 const PAGE_SIZE = 20;
 
-type Chamber = 'house' | 'senate' | '';
-type BillStatus = 'introduced' | 'in_committee' | 'passed_house' | 'passed_senate' | 'became_law' | '';
-
 interface Filters {
   search: string;
-  chamber: Chamber;
-  status: BillStatus;
+  chamber: '' | 'house' | 'senate';
+  status: '' | 'introduced' | 'in_committee' | 'passed_house' | 'passed_senate' | 'became_law' | 'vetoed';
 }
 
 export function BillsPageClient() {
@@ -59,21 +56,6 @@ export function BillsPageClient() {
   const { bills, pagination, isLoading, error, mutate } = useBills(queryParams);
 
   // Handlers
-  const handleSearchChange = useCallback((value: string) => {
-    setFilters((prev) => ({ ...prev, search: value }));
-    setPage(1); // Reset to first page on search
-  }, []);
-
-  const handleChamberChange = useCallback((value: Chamber) => {
-    setFilters((prev) => ({ ...prev, chamber: value }));
-    setPage(1);
-  }, []);
-
-  const handleStatusChange = useCallback((value: BillStatus) => {
-    setFilters((prev) => ({ ...prev, status: value }));
-    setPage(1);
-  }, []);
-
   const handleClearFilters = useCallback(() => {
     setFilters({ search: '', chamber: '', status: '' });
     setPage(1);
@@ -106,49 +88,16 @@ export function BillsPageClient() {
           </div>
 
           {/* Search and filters */}
-          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="relative flex-1 max-w-lg">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="search"
-                placeholder="Search bills by title, number, or keyword..."
-                value={filters.search}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="input w-full pl-10"
-              />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <select
-                value={filters.chamber}
-                onChange={(e) => handleChamberChange(e.target.value as Chamber)}
-                className="input w-auto"
-              >
-                <option value="">All Chambers</option>
-                <option value="house">House</option>
-                <option value="senate">Senate</option>
-              </select>
-              <select
-                value={filters.status}
-                onChange={(e) => handleStatusChange(e.target.value as BillStatus)}
-                className="input w-auto"
-              >
-                <option value="">All Statuses</option>
-                <option value="introduced">Introduced</option>
-                <option value="in_committee">In Committee</option>
-                <option value="passed_house">Passed House</option>
-                <option value="passed_senate">Passed Senate</option>
-                <option value="became_law">Became Law</option>
-              </select>
-              {hasActiveFilters && (
-                <button
-                  onClick={handleClearFilters}
-                  className="btn-outline text-red-600 hover:text-red-700"
-                >
-                  <X className="mr-1 h-4 w-4" />
-                  Clear
-                </button>
-              )}
-            </div>
+          <div className="mb-6">
+            <BillFilters
+              filters={filters}
+              onChange={(newFilters) => {
+                setFilters(newFilters);
+                setPage(1);
+              }}
+              onClear={handleClearFilters}
+              isLoading={isLoading}
+            />
           </div>
 
           {/* Error state */}

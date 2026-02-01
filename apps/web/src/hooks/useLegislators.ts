@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import type { Legislator, PaginatedResponse, Pagination } from '@ltip/shared';
 import { getLegislators, getLegislator, type LegislatorsQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
+import { swrConfig } from '@/config/env';
 
 export interface UseLegislatorsOptions extends LegislatorsQueryParams {
   /** Enable/disable fetching */
@@ -47,8 +48,8 @@ export function useLegislators(options: UseLegislatorsOptions = {}): UseLegislat
     key,
     async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getLegislators(params, signal),
     {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
+      revalidateOnFocus: swrConfig.revalidateOnFocus,
+      dedupingInterval: swrConfig.dedupingInterval,
     }
   );
 
@@ -78,7 +79,7 @@ export function useLegislator(id: string | null) {
       return getLegislator(id, signal);
     },
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: swrConfig.revalidateOnFocus,
     }
   );
 

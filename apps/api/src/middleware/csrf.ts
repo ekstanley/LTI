@@ -26,6 +26,7 @@ import {
 import { logger } from '../lib/logger.js';
 import { config } from '../config.js';
 import { ApiError } from '../middleware/error.js';
+import { hasSession } from '../utils/type-guards.js';
 
 /**
  * Feature flag for CSRF protection
@@ -64,8 +65,7 @@ export async function csrfProtection(
     }
 
     // Require authentication - CSRF protection requires session
-    const session = (req as any).session as { id: string } | undefined;
-    if (!session?.id) {
+    if (!hasSession(req)) {
       logger.warn(
         { method: req.method, path: req.path },
         'CSRF protection requires authentication'
@@ -73,7 +73,7 @@ export async function csrfProtection(
       throw ApiError.unauthorized('Authentication required for CSRF protection');
     }
 
-    const sessionId = session.id;
+    const sessionId = req.session.id;
 
     // Extract CSRF token from header
     const csrfToken = req.headers['x-csrf-token'];
@@ -143,12 +143,11 @@ export async function csrfProtectionOptional(
     }
 
     // Skip CSRF check if no session (unauthenticated request)
-    const session = (req as any).session as { id: string } | undefined;
-    if (!session?.id) {
+    if (!hasSession(req)) {
       return next();
     }
 
-    const sessionId = session.id;
+    const sessionId = req.session.id;
     const csrfToken = req.headers['x-csrf-token'];
 
     // If token is provided, validate it
@@ -201,12 +200,11 @@ export async function csrfProtectionOptional(
 export async function getCsrfToken(req: Request, res: Response): Promise<void> {
   try {
     // Require authentication
-    const session = (req as any).session as { id: string } | undefined;
-    if (!session?.id) {
+    if (!hasSession(req)) {
       throw ApiError.unauthorized('Authentication required to obtain CSRF token');
     }
 
-    const sessionId = session.id;
+    const sessionId = req.session.id;
 
     // Generate new CSRF token
     const csrfToken = await generateCsrfToken(sessionId);

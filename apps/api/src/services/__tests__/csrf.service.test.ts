@@ -67,17 +67,14 @@ describe('CSRF Service', () => {
     });
 
     it('should throw error for invalid session ID (non-string)', async () => {
-      await expect(
-        csrfService.generateCsrfToken(null as any)
-      ).rejects.toThrow('Invalid session ID');
+      // @ts-expect-error - Testing invalid input types
+      await expect(csrfService.generateCsrfToken(null)).rejects.toThrow('Invalid session ID');
 
-      await expect(
-        csrfService.generateCsrfToken(undefined as any)
-      ).rejects.toThrow('Invalid session ID');
+      // @ts-expect-error - Testing invalid input types
+      await expect(csrfService.generateCsrfToken(undefined)).rejects.toThrow('Invalid session ID');
 
-      await expect(
-        csrfService.generateCsrfToken(123 as any)
-      ).rejects.toThrow('Invalid session ID');
+      // @ts-expect-error - Testing invalid input types
+      await expect(csrfService.generateCsrfToken(123)).rejects.toThrow('Invalid session ID');
     });
 
     it('should handle Redis errors gracefully', async () => {
@@ -168,10 +165,14 @@ describe('CSRF Service', () => {
     });
 
     it('should return false for null/undefined inputs', async () => {
-      expect(await csrfService.validateCsrfToken(null as any, mockToken)).toBe(false);
-      expect(await csrfService.validateCsrfToken(mockSessionId, null as any)).toBe(false);
-      expect(await csrfService.validateCsrfToken(undefined as any, mockToken)).toBe(false);
-      expect(await csrfService.validateCsrfToken(mockSessionId, undefined as any)).toBe(false);
+      // @ts-expect-error - Testing invalid input types
+      expect(await csrfService.validateCsrfToken(null, mockToken)).toBe(false);
+      // @ts-expect-error - Testing invalid input types
+      expect(await csrfService.validateCsrfToken(mockSessionId, null)).toBe(false);
+      // @ts-expect-error - Testing invalid input types
+      expect(await csrfService.validateCsrfToken(undefined, mockToken)).toBe(false);
+      // @ts-expect-error - Testing invalid input types
+      expect(await csrfService.validateCsrfToken(mockSessionId, undefined)).toBe(false);
     });
 
     it('should handle Redis errors gracefully', async () => {
@@ -229,10 +230,14 @@ describe('CSRF Service', () => {
     });
 
     it('should handle null/undefined inputs gracefully', async () => {
-      await csrfService.invalidateCsrfToken(null as any, mockToken);
-      await csrfService.invalidateCsrfToken(mockSessionId, null as any);
-      await csrfService.invalidateCsrfToken(undefined as any, mockToken);
-      await csrfService.invalidateCsrfToken(mockSessionId, undefined as any);
+      // @ts-expect-error - Testing invalid input types
+      await csrfService.invalidateCsrfToken(null, mockToken);
+      // @ts-expect-error - Testing invalid input types
+      await csrfService.invalidateCsrfToken(mockSessionId, null);
+      // @ts-expect-error - Testing invalid input types
+      await csrfService.invalidateCsrfToken(undefined, mockToken);
+      // @ts-expect-error - Testing invalid input types
+      await csrfService.invalidateCsrfToken(mockSessionId, undefined);
 
       expect(redis.cache.get).not.toHaveBeenCalled();
     });
@@ -260,8 +265,10 @@ describe('CSRF Service', () => {
     });
 
     it('should handle null/undefined session ID gracefully', async () => {
-      await csrfService.clearSessionCsrfTokens(null as any);
-      await csrfService.clearSessionCsrfTokens(undefined as any);
+      // @ts-expect-error - Testing invalid input types
+      await csrfService.clearSessionCsrfTokens(null);
+      // @ts-expect-error - Testing invalid input types
+      await csrfService.clearSessionCsrfTokens(undefined);
 
       expect(redis.cache.invalidatePattern).not.toHaveBeenCalled();
     });

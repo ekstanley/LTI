@@ -27,12 +27,18 @@ vi.mock('../../config.js', () => ({
   },
 }));
 
+// Type-safe config mock manipulation
+interface WritableConfig {
+  nodeEnv: string;
+  corsOrigins: string[];
+}
+
 describe('validateRedirectUrl', () => {
   beforeEach(() => {
     // Reset config to production defaults before each test
     // Note: We directly modify the mocked config object
-    (config as any).nodeEnv = 'production';
-    (config as any).corsOrigins = ['https://ltip.gov', 'https://app.ltip.gov'];
+    (config as WritableConfig).nodeEnv = 'production';
+    (config as WritableConfig).corsOrigins = ['https://ltip.gov', 'https://app.ltip.gov'];
     vi.clearAllMocks();
   });
 
@@ -122,7 +128,7 @@ describe('validateRedirectUrl', () => {
 
   describe('development mode - localhost support', () => {
     beforeEach(() => {
-      (config as any).nodeEnv = 'development';
+      (config as WritableConfig).nodeEnv = 'development';
     });
 
     it('allows localhost on any port in development', () => {
@@ -236,7 +242,7 @@ describe('validateRedirectUrl', () => {
 
   describe('allowlist configuration variations', () => {
     it('works with single origin in allowlist', () => {
-      (config as any).corsOrigins = ['https://ltip.gov'];
+      (config as WritableConfig).corsOrigins = ['https://ltip.gov'];
 
       const result1 = validateRedirectUrl('https://ltip.gov/dashboard');
       const result2 = validateRedirectUrl('https://app.ltip.gov/dashboard');
@@ -246,7 +252,7 @@ describe('validateRedirectUrl', () => {
     });
 
     it('works with multiple origins in allowlist', () => {
-      (config as any).corsOrigins = [
+      (config as WritableConfig).corsOrigins = [
         'https://ltip.gov',
         'https://app.ltip.gov',
         'https://admin.ltip.gov',
@@ -264,7 +270,7 @@ describe('validateRedirectUrl', () => {
     });
 
     it('works with empty allowlist (rejects all)', () => {
-      (config as any).corsOrigins = [];
+      (config as WritableConfig).corsOrigins = [];
 
       const result = validateRedirectUrl('https://ltip.gov/dashboard');
 
