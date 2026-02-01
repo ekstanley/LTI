@@ -1,8 +1,8 @@
 /**
  * Express Type Augmentation
  *
- * Extends Express Request interface to include authenticated user.
- * This provides type safety for auth middleware consumers.
+ * Extends Express Request interface to include authenticated user and session.
+ * This provides type safety for auth and CSRF middleware consumers.
  */
 
 import type { User } from '@prisma/client';
@@ -21,6 +21,18 @@ export interface AuthenticatedUser {
   rateLimit: number;
 }
 
+/**
+ * Session data attached to request.
+ * Used for CSRF protection and session management.
+ */
+export interface SessionData {
+  id: string;
+  userId?: string;
+  createdAt?: number;
+  lastActivity?: number;
+  [key: string]: unknown;
+}
+
 declare global {
   namespace Express {
     interface Request {
@@ -29,6 +41,12 @@ declare global {
        * Will be undefined if optionalAuth is used and no valid token provided.
        */
       user?: AuthenticatedUser;
+
+      /**
+       * Session data, populated by session middleware.
+       * Contains session ID and optional user data.
+       */
+      session?: SessionData;
     }
   }
 }

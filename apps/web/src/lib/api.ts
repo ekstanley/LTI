@@ -10,8 +10,9 @@ import type {
   ConflictOfInterest,
   PaginatedResponse,
 } from '@ltip/shared';
+import { apiConfig } from '@/config/env';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const API_BASE_URL = apiConfig.baseUrl;
 
 // ============================================================================
 // CSRF Token Management
@@ -560,16 +561,16 @@ export function getErrorMessage(error: unknown): string {
 // ============================================================================
 
 /** Maximum number of retry attempts for transient failures */
-const MAX_RETRIES = 3;
+const MAX_RETRIES = apiConfig.maxRetries;
 
 /** Initial backoff delay in milliseconds */
-const INITIAL_BACKOFF_MS = 1000;
+const INITIAL_BACKOFF_MS = apiConfig.initialBackoffMs;
 
 /** Maximum backoff delay in milliseconds (30 seconds) */
-const MAX_BACKOFF_MS = 30000;
+const MAX_BACKOFF_MS = apiConfig.maxBackoffMs;
 
 /** Maximum CSRF token refresh attempts to prevent infinite loops */
-const MAX_CSRF_REFRESH_ATTEMPTS = 2;
+const MAX_CSRF_REFRESH_ATTEMPTS = apiConfig.maxCsrfRefreshAttempts;
 
 /**
  * Check if error is retriable (transient failure)

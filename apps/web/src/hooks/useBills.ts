@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
 import { getBills, getBill, type BillsQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
+import { swrConfig } from '@/config/env';
 
 export interface UseBillsOptions extends BillsQueryParams {
   /** Enable/disable fetching */
@@ -46,8 +47,8 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
     key,
     async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getBills(params, signal),
     {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
+      revalidateOnFocus: swrConfig.revalidateOnFocus,
+      dedupingInterval: swrConfig.dedupingInterval,
     }
   );
 
@@ -77,7 +78,7 @@ export function useBill(id: string | null) {
       return getBill(id, signal);
     },
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: swrConfig.revalidateOnFocus,
     }
   );
 

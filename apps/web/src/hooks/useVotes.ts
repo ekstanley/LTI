@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import type { Vote, PaginatedResponse, Pagination } from '@ltip/shared';
 import { getVotes, getVote, type VotesQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
+import { swrConfig } from '@/config/env';
 
 export interface UseVotesOptions extends VotesQueryParams {
   /** Enable/disable fetching */
@@ -46,8 +47,8 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
     key,
     async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getVotes(params, signal),
     {
-      revalidateOnFocus: false,
-      dedupingInterval: 5000,
+      revalidateOnFocus: swrConfig.revalidateOnFocus,
+      dedupingInterval: swrConfig.dedupingInterval,
     }
   );
 
@@ -77,7 +78,7 @@ export function useVote(id: string | null) {
       return getVote(id, signal);
     },
     {
-      revalidateOnFocus: false,
+      revalidateOnFocus: swrConfig.revalidateOnFocus,
     }
   );
 

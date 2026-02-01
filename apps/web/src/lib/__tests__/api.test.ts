@@ -401,6 +401,8 @@ describe('API Client', () => {
         mockFetch.mockRejectedValue(new TypeError('fetch failed'));
 
         const resultPromise = checkHealth();
+        // Prevent unhandled rejection warnings
+        resultPromise.catch(() => {});
 
         // Advance through all retry attempts
         // Attempt 0: immediate
@@ -422,6 +424,8 @@ describe('API Client', () => {
         });
 
         const resultPromise = checkHealth();
+        // Prevent unhandled rejection warnings
+        resultPromise.catch(() => {});
 
         // Advance through all retry attempts
         await vi.advanceTimersByTimeAsync(8000);
@@ -440,6 +444,8 @@ describe('API Client', () => {
         });
 
         const resultPromise = checkHealth();
+        // Prevent unhandled rejection warnings
+        resultPromise.catch(() => {});
 
         // Advance through all retry attempts
         await vi.advanceTimersByTimeAsync(8000);
@@ -490,6 +496,8 @@ describe('API Client', () => {
         mockFetch.mockRejectedValue(new TypeError('fetch failed'));
 
         const resultPromise = checkHealth();
+        // Prevent unhandled rejection warnings
+        resultPromise.catch(() => {});
 
         // Advance through retry attempts
         // Attempt 1 backoff: ~1000ms (1000 * 2^0)
@@ -515,6 +523,8 @@ describe('API Client', () => {
         mockFetch.mockRejectedValue(new TypeError('fetch failed'));
 
         const resultPromise = checkHealth();
+        // Prevent unhandled rejection warnings
+        resultPromise.catch(() => {});
 
         await vi.advanceTimersByTimeAsync(10000);
 

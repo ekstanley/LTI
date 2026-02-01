@@ -43,3 +43,25 @@ export {
   LEGISLATOR_ID_MAX_LENGTH,
   LEGISLATOR_ID_PATTERN,
 } from './legislators';
+
+// ============================================================================
+// Filter Validation (Zod Schemas)
+// ============================================================================
+
+export {
+  billFilterSchema,
+  voteFilterSchema,
+  legislatorFilterSchema,
+  billTypes,
+  billStatuses,
+  chambers,
+  voteResults,
+  legislatorChambers,
+  parties,
+} from './filters';
+
+export type {
+  BillFilterInput,
+  VoteFilterInput,
+  LegislatorFilterInput,
+} from './filters';
