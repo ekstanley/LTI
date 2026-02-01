@@ -3,9 +3,10 @@
  * @module app/bills/[id]/page
  */
 
+import { isValidBillId } from '@ltip/shared/validation';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { isValidBillId } from '@ltip/shared/validation';
+
 import { BillDetailClient } from './BillDetailClient';
 
 interface BillPageProps {

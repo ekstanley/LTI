@@ -9,14 +9,14 @@
 
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
-import { Search, X, AlertCircle } from 'lucide-react';
 import {
   billFilterSchema,
   chambers,
   billStatuses,
   type BillFilterInput,
 } from '@ltip/shared/validation';
+import { Search, X, AlertCircle } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
 import type { ZodError } from 'zod';
 
 /**

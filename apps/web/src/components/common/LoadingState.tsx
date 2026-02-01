@@ -3,8 +3,9 @@
  * @module components/common/LoadingState
  */
 
-import { cn } from '@/lib/utils';
 import { Loader2 } from 'lucide-react';
+
+import { cn } from '@/lib/utils';
 
 type LoadingSize = 'sm' | 'md' | 'lg';
 type LoadingVariant = 'spinner' | 'dots' | 'skeleton';

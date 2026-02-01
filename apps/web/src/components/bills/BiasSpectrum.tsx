@@ -1,7 +1,8 @@
 'use client';
 
-import { cn } from '@/lib/utils';
 import { getBiasLabel, getBiasColor } from '@ltip/shared';
+
+import { cn } from '@/lib/utils';
 
 interface BiasSpectrumProps {
   score: number; // -1 (left) to +1 (right)

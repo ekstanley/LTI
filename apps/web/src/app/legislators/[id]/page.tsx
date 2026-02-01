@@ -3,9 +3,10 @@
  * @module app/legislators/[id]/page
  */
 
+import { isValidLegislatorId } from '@ltip/shared/validation';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { isValidLegislatorId } from '@ltip/shared/validation';
+
 import { LegislatorDetailClient } from './LegislatorDetailClient';
 
 interface LegislatorPageProps {

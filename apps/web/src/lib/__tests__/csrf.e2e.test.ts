@@ -9,6 +9,7 @@
  * - Automatic recovery mechanisms
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import * as api from '../api';
 
 // Mock fetch globally

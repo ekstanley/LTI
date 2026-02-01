@@ -6,8 +6,11 @@
 
 'use client';
 
-import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import Link from 'next/link';
+import {
+  VOTE_RESULT_LABELS,
+  CHAMBER_SHORT_LABELS,
+} from '@ltip/shared';
+import type { Vote, VoteResult } from '@ltip/shared';
 import {
   Vote as VoteIcon,
   Building2,
@@ -20,15 +23,14 @@ import {
   ThumbsDown,
   Minus,
 } from 'lucide-react';
-import { useVotes } from '@/hooks';
+import Link from 'next/link';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
+
 import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
 import { VoteFilters } from '@/components/VoteFilters';
+import { useVotes } from '@/hooks';
 import type { VotesQueryParams } from '@/lib/api';
-import {
-  VOTE_RESULT_LABELS,
-  CHAMBER_SHORT_LABELS,
-} from '@ltip/shared';
-import type { Vote, VoteResult, Chamber } from '@ltip/shared';
+
 
 const PAGE_SIZE = 20;
 const POLL_INTERVAL = 30000; // 30 seconds for live updates
@@ -136,7 +138,7 @@ function formatDate(dateString: string): string {
  * Vote card component for the list view
  */
 function VoteCard({ vote }: { vote: Vote }) {
-  const chamberLabel = CHAMBER_SHORT_LABELS[vote.chamber as Chamber] ?? vote.chamber;
+  const chamberLabel = CHAMBER_SHORT_LABELS[vote.chamber] ?? vote.chamber;
 
   return (
     <div className="rounded-lg border border-gray-200 bg-white p-5 transition-shadow hover:shadow-md">

@@ -9,6 +9,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import { getBill, ApiError } from '../api';
 
 describe('M-1: Error Message Sanitization', () => {

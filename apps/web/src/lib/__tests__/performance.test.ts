@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { trackWebVitals, checkPerformanceBudget, type PerformanceMetric } from '../performance';
 
 describe('Performance Tracking', () => {

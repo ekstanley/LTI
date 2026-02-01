@@ -5,7 +5,13 @@
 
 'use client';
 
-import Link from 'next/link';
+import {
+  PARTY_LABELS,
+  PARTY_COLORS,
+  PARTY_TEXT_COLORS,
+  CHAMBER_LABELS,
+  US_STATES,
+} from '@ltip/shared';
 import {
   ArrowLeft,
   Building2,
@@ -17,16 +23,11 @@ import {
   Users,
   ExternalLink,
 } from 'lucide-react';
-import { useLegislator } from '@/hooks';
+import Link from 'next/link';
+
 import { Navigation, LoadingState, ErrorFallback } from '@/components/common';
-import {
-  PARTY_LABELS,
-  PARTY_COLORS,
-  PARTY_TEXT_COLORS,
-  CHAMBER_LABELS,
-  US_STATES,
-} from '@ltip/shared';
-import type { Party, Chamber } from '@ltip/shared';
+import { useLegislator } from '@/hooks';
+
 
 interface LegislatorDetailClientProps {
   legislatorId: string;
@@ -131,7 +132,7 @@ export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientP
             <ErrorFallback
               error={error}
               title="Failed to load legislator"
-              onRetry={() => mutate()}
+              onRetry={() => void mutate()}
             />
           )}
 
@@ -170,7 +171,7 @@ export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientP
                   ) : (
                     <div
                       className={`flex h-32 w-32 items-center justify-center rounded-full ${
-                        PARTY_COLORS[legislator.party as Party] ?? 'bg-gray-600'
+                        PARTY_COLORS[legislator.party] ?? 'bg-gray-600'
                       } text-white text-4xl font-bold border-4 border-white shadow-lg`}
                     >
                       {legislator.firstName[0]}
@@ -184,10 +185,10 @@ export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientP
                   <div className="flex items-center gap-3 mb-2">
                     <span
                       className={`text-sm font-medium ${
-                        PARTY_TEXT_COLORS[legislator.party as Party] ?? 'text-gray-600'
+                        PARTY_TEXT_COLORS[legislator.party] ?? 'text-gray-600'
                       }`}
                     >
-                      {PARTY_LABELS[legislator.party as Party] ?? legislator.party}
+                      {PARTY_LABELS[legislator.party] ?? legislator.party}
                     </span>
                     {!legislator.inOffice && (
                       <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600">
@@ -197,7 +198,7 @@ export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientP
                   </div>
                   <h1 className="text-3xl font-bold text-gray-900">{legislator.fullName}</h1>
                   <p className="mt-2 text-xl text-gray-600">
-                    {CHAMBER_LABELS[legislator.chamber as Chamber] ?? legislator.chamber}
+                    {CHAMBER_LABELS[legislator.chamber] ?? legislator.chamber}
                     {' \u2022 '}
                     {US_STATES[legislator.state as keyof typeof US_STATES] ?? legislator.state}
                     {legislator.district && ` \u2022 District ${legislator.district}`}
@@ -209,7 +210,7 @@ export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientP
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
                 {/* Chamber */}
                 <InfoCard icon={Building2} label="Chamber">
-                  {CHAMBER_LABELS[legislator.chamber as Chamber] ?? legislator.chamber}
+                  {CHAMBER_LABELS[legislator.chamber] ?? legislator.chamber}
                 </InfoCard>
 
                 {/* State */}

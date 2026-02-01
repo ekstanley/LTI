@@ -1,7 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
 import { render } from '@testing-library/react';
-import { WebVitals } from '../WebVitals';
 import * as NextWebVitals from 'next/web-vitals';
+import { describe, it, expect, vi } from 'vitest';
+
+import { WebVitals } from '../WebVitals';
+
 
 // Mock next/web-vitals
 vi.mock('next/web-vitals', () => ({

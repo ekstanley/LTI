@@ -7,13 +7,16 @@
  * - Cache key stability (3 param combinations)
  * - Error handling (4 error types)
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { SWRConfig } from 'swr';
-import { useVotes, useVote } from '../useVotes';
-import * as api from '@/lib/api';
 import type { Vote, PaginatedResponse } from '@ltip/shared';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { SWRConfig } from 'swr';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import * as api from '@/lib/api';
+
+import { useVotes, useVote } from '../useVotes';
+
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({

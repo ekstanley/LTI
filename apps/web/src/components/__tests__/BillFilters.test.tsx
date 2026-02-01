@@ -4,8 +4,9 @@
  * @module components/__tests__/BillFilters.test
  */
 
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
 import { BillFilters } from '../BillFilters';
 import type { BillFilters as BillFiltersType } from '../BillFilters';
 

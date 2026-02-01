@@ -3,6 +3,7 @@
  * @module lib/utils.test
  */
 import { describe, it, expect } from 'vitest';
+
 import { cn } from './utils';
 
 describe('cn (className utility)', () => {

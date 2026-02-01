@@ -4,10 +4,11 @@
  *
  * Tests the useCsrf React hook for CSRF token management
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
-import { useCsrf } from '../useCsrf';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
 import * as api from '../../lib/api';
+import { useCsrf } from '../useCsrf';
 
 // Mock the API module
 vi.mock('../../lib/api', () => ({

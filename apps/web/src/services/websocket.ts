@@ -203,9 +203,9 @@ export class WebSocketService {
     this.startHeartbeat();
   }
 
-  private handleMessage(event: MessageEvent): void {
+  private handleMessage(event: MessageEvent<string>): void {
     try {
-      const data = JSON.parse(event.data) as { type: string; data?: any };
+      const data = JSON.parse(event.data) as { type: string; data?: { message?: string } };
 
       // Handle server messages
       if (data.type === 'pong' || data.type === 'connection:established') {

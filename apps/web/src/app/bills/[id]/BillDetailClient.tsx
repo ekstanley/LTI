@@ -5,10 +5,6 @@
 
 'use client';
 
-import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, FileText, Building2, Tag } from 'lucide-react';
-import { useBill } from '@/hooks';
-import { Navigation, LoadingState, ErrorFallback } from '@/components/common';
 import {
   BILL_TYPES,
   BILL_STATUS_LABELS,
@@ -17,7 +13,13 @@ import {
   PARTY_TEXT_COLORS,
   CHAMBER_SHORT_LABELS,
 } from '@ltip/shared';
-import type { Bill, BillType, BillStatus, Party, Chamber } from '@ltip/shared';
+import type { Bill, BillType, BillStatus } from '@ltip/shared';
+import { ArrowLeft, Calendar, Users, FileText, Building2, Tag } from 'lucide-react';
+import Link from 'next/link';
+
+import { Navigation, LoadingState, ErrorFallback } from '@/components/common';
+import { useBill } from '@/hooks';
+
 
 interface BillDetailClientProps {
   billId: string;
@@ -102,7 +104,7 @@ export function BillDetailClient({ billId }: BillDetailClientProps) {
             <ErrorFallback
               error={error}
               title="Failed to load bill"
-              onRetry={() => mutate()}
+              onRetry={() => void mutate()}
             />
           )}
 
@@ -156,11 +158,11 @@ export function BillDetailClient({ billId }: BillDetailClientProps) {
                       href={`/legislators/${bill.sponsor.id}`}
                       className="hover:underline"
                     >
-                      <span className={PARTY_TEXT_COLORS[bill.sponsor.party as Party] ?? 'text-gray-900'}>
+                      <span className={PARTY_TEXT_COLORS[bill.sponsor.party] ?? 'text-gray-900'}>
                         {bill.sponsor.fullName}
                       </span>
                       <span className="text-gray-500 ml-1">
-                        ({PARTY_LABELS[bill.sponsor.party as Party]?.[0] ?? bill.sponsor.party}-
+                        ({PARTY_LABELS[bill.sponsor.party]?.[0] ?? bill.sponsor.party}-
                         {bill.sponsor.state})
                       </span>
                     </Link>
@@ -171,7 +173,7 @@ export function BillDetailClient({ billId }: BillDetailClientProps) {
 
                 {/* Chamber */}
                 <InfoCard icon={Building2} label="Originating Chamber">
-                  {CHAMBER_SHORT_LABELS[bill.chamber as Chamber] ?? bill.chamber}
+                  {CHAMBER_SHORT_LABELS[bill.chamber] ?? bill.chamber}
                 </InfoCard>
 
                 {/* Introduced */}
@@ -205,7 +207,7 @@ export function BillDetailClient({ billId }: BillDetailClientProps) {
                         {formatDate(bill.latestAction.date)}
                         {bill.latestAction.chamber && (
                           <span className="ml-2">
-                            &middot; {CHAMBER_SHORT_LABELS[bill.latestAction.chamber as Chamber] ?? bill.latestAction.chamber}
+                            &middot; {CHAMBER_SHORT_LABELS[bill.latestAction.chamber] ?? bill.latestAction.chamber}
                           </span>
                         )}
                       </p>

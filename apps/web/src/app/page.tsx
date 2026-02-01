@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { Search, TrendingUp, Users, AlertTriangle, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 
 export default function HomePage() {
   return (

@@ -6,10 +6,11 @@
 'use client';
 
 import { useState, useMemo, useCallback } from 'react';
-import { useBills, useDebounce } from '@/hooks';
-import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
-import { BillCard } from '@/components/bills';
+
 import { BillFilters } from '@/components/BillFilters';
+import { BillCard } from '@/components/bills';
+import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
+import { useBills, useDebounce } from '@/hooks';
 import type { BillsQueryParams } from '@/lib/api';
 
 const PAGE_SIZE = 20;
