@@ -39,7 +39,7 @@ export const chambers = ['house', 'senate'] as const;
  * Zod schema for bill filter inputs
  *
  * Validates filter parameters for bill queries with appropriate constraints:
- * - Search: 1-500 characters, trimmed
+ * - Search: 1-200 characters, trimmed (matches API limit)
  * - Congress: Integer 1-200 (reasonable historical range)
  * - Chamber: house or senate
  * - Status: valid bill status enum
@@ -68,7 +68,7 @@ export const billFilterSchema = z
       .string()
       .trim()
       .min(1, 'Search must be at least 1 character')
-      .max(500, 'Search cannot exceed 500 characters')
+      .max(200, 'Search cannot exceed 200 characters')
       .optional(),
 
     congress: z

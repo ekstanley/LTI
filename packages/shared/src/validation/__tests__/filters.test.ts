@@ -72,9 +72,9 @@ describe('billFilterSchema', () => {
   });
 
   describe('invalid inputs', () => {
-    it('should reject search longer than 500 characters', () => {
+    it('should reject search longer than 200 characters', () => {
       const input: Partial<BillFilterInput> = {
-        search: 'a'.repeat(501),
+        search: 'a'.repeat(201),
       };
 
       const result = billFilterSchema.safeParse(input);
