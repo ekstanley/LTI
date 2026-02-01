@@ -826,7 +826,17 @@ const BILLS_QUERY_SCHEMA: ValidationSchema = {
   },
   status: {
     type: 'enum',
-    values: ['introduced', 'passed_house', 'passed_senate', 'enacted', 'vetoed'] as const,
+    values: [
+      'introduced',
+      'in_committee',
+      'passed_house',
+      'passed_senate',
+      'resolving_differences',
+      'to_president',
+      'became_law',
+      'vetoed',
+      'failed',
+    ] as const,
   },
   chamber: { type: 'enum', values: ['house', 'senate'] as const },
   search: { type: 'string', maxLength: 200 },
