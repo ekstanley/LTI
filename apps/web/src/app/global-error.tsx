@@ -14,8 +14,11 @@ interface GlobalErrorProps {
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
   useEffect(() => {
-    // Log critical error to monitoring service
-    console.error('Global error:', error);
+    // Only log errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Global error:', error);
+    }
+    // TODO: Send critical error to monitoring service (Sentry, LogRocket, etc.) in production
   }, [error]);
 
   return (

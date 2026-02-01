@@ -1,31 +1,11 @@
 import { Router, type Router as RouterType } from 'express';
-import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
+import { validateBillIdParam } from '../middleware/routeValidation.js';
 import { ApiError } from '../middleware/error.js';
 import { billService } from '../services/index.js';
+import { listBillsSchema, getBillSchema, relatedBillsQuerySchema } from '../schemas/bills.schema.js';
 
 export const billsRouter: RouterType = Router();
-
-// Query params schema
-const listBillsSchema = z.object({
-  congressNumber: z.coerce.number().int().min(1).optional(),
-  billType: z.enum(['hr', 's', 'hjres', 'sjres', 'hconres', 'sconres', 'hres', 'sres']).optional(),
-  status: z.enum([
-    'introduced',
-    'in_committee',
-    'passed_house',
-    'passed_senate',
-    'resolving_differences',
-    'to_president',
-    'became_law',
-    'vetoed',
-    'failed',
-  ]).optional(),
-  chamber: z.enum(['house', 'senate', 'joint']).optional(),
-  search: z.string().max(200).optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 
 // Get all bills with filtering and pagination
 billsRouter.get('/', validate(listBillsSchema, 'query'), async (req, res, next) => {
@@ -47,11 +27,7 @@ billsRouter.get('/', validate(listBillsSchema, 'query'), async (req, res, next) 
 });
 
 // Get single bill by ID
-const getBillSchema = z.object({
-  id: z.string().min(1),
-});
-
-billsRouter.get('/:id', validate(getBillSchema, 'params'), async (req, res, next) => {
+billsRouter.get('/:id', validateBillIdParam, validate(getBillSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getBillSchema.parse(req.params);
     const bill = await billService.getById(id);
@@ -67,7 +43,7 @@ billsRouter.get('/:id', validate(getBillSchema, 'params'), async (req, res, next
 });
 
 // Get all bill sponsors (primary + cosponsors)
-billsRouter.get('/:id/sponsors', validate(getBillSchema, 'params'), async (req, res, next) => {
+billsRouter.get('/:id/sponsors', validateBillIdParam, validate(getBillSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getBillSchema.parse(req.params);
     const sponsors = await billService.getSponsors(id);
@@ -78,7 +54,7 @@ billsRouter.get('/:id/sponsors', validate(getBillSchema, 'params'), async (req, 
 });
 
 // Get bill cosponsors (non-primary sponsors only)
-billsRouter.get('/:id/cosponsors', validate(getBillSchema, 'params'), async (req, res, next) => {
+billsRouter.get('/:id/cosponsors', validateBillIdParam, validate(getBillSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getBillSchema.parse(req.params);
     const cosponsors = await billService.getCosponsors(id);
@@ -89,7 +65,7 @@ billsRouter.get('/:id/cosponsors', validate(getBillSchema, 'params'), async (req
 });
 
 // Get bill actions/history
-billsRouter.get('/:id/actions', validate(getBillSchema, 'params'), async (req, res, next) => {
+billsRouter.get('/:id/actions', validateBillIdParam, validate(getBillSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getBillSchema.parse(req.params);
     const actions = await billService.getActions(id);
@@ -100,7 +76,7 @@ billsRouter.get('/:id/actions', validate(getBillSchema, 'params'), async (req, r
 });
 
 // Get bill text versions
-billsRouter.get('/:id/text', validate(getBillSchema, 'params'), async (req, res, next) => {
+billsRouter.get('/:id/text', validateBillIdParam, validate(getBillSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getBillSchema.parse(req.params);
     const textVersions = await billService.getTextVersions(id);
@@ -111,12 +87,9 @@ billsRouter.get('/:id/text', validate(getBillSchema, 'params'), async (req, res,
 });
 
 // Get related bills
-const relatedBillsQuerySchema = z.object({
-  limit: z.coerce.number().int().min(1).max(20).default(10),
-});
-
 billsRouter.get(
   '/:id/related',
+  validateBillIdParam,
   validate(getBillSchema, 'params'),
   validate(relatedBillsQuerySchema, 'query'),
   async (req, res, next) => {

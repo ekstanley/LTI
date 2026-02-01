@@ -1,16 +1,13 @@
 import { Router, type Router as RouterType } from 'express';
-import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import { ApiError } from '../middleware/error.js';
 import type { BillAnalysis } from '@ltip/shared';
+import { getAnalysisSchema } from '../schemas/analysis.schema.js';
 
 export const analysisRouter: RouterType = Router();
 
 // Get analysis by bill ID
-const getAnalysisSchema = z.object({
-  billId: z.string().min(1),
-});
-
+// ID validation: alphanumeric, dash, underscore only (prevents injection attacks)
 analysisRouter.get('/:billId', validate(getAnalysisSchema, 'params'), async (_req, res, next) => {
   try {
     // TODO: Replace with actual database query when analysis service is implemented

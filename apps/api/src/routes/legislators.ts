@@ -1,20 +1,11 @@
 import { Router, type Router as RouterType } from 'express';
-import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
+import { validateLegislatorIdParam } from '../middleware/routeValidation.js';
 import { ApiError } from '../middleware/error.js';
 import { legislatorService } from '../services/index.js';
+import { listLegislatorsSchema, getLegislatorSchema, legislatorBillsSchema, legislatorVotesSchema } from '../schemas/legislators.schema.js';
 
 export const legislatorsRouter: RouterType = Router();
-
-const listLegislatorsSchema = z.object({
-  chamber: z.enum(['house', 'senate']).optional(),
-  party: z.enum(['D', 'R', 'I', 'L', 'G']).optional(),
-  state: z.string().length(2).toUpperCase().optional(),
-  search: z.string().max(100).optional(),
-  inOffice: z.coerce.boolean().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 
 // Get all legislators with filtering and pagination
 legislatorsRouter.get('/', validate(listLegislatorsSchema, 'query'), async (req, res, next) => {
@@ -36,11 +27,8 @@ legislatorsRouter.get('/', validate(listLegislatorsSchema, 'query'), async (req,
 });
 
 // Get single legislator by ID
-const getLegislatorSchema = z.object({
-  id: z.string().min(1),
-});
-
-legislatorsRouter.get('/:id', validate(getLegislatorSchema, 'params'), async (req, res, next) => {
+// ID validation: bioguideId format (1 uppercase letter + 6 digits) or alphanumeric
+legislatorsRouter.get('/:id', validateLegislatorIdParam, validate(getLegislatorSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getLegislatorSchema.parse(req.params);
     const legislator = await legislatorService.getById(id);
@@ -56,7 +44,7 @@ legislatorsRouter.get('/:id', validate(getLegislatorSchema, 'params'), async (re
 });
 
 // Get legislator with committees
-legislatorsRouter.get('/:id/committees', validate(getLegislatorSchema, 'params'), async (req, res, next) => {
+legislatorsRouter.get('/:id/committees', validateLegislatorIdParam, validate(getLegislatorSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getLegislatorSchema.parse(req.params);
     const legislator = await legislatorService.getWithCommittees(id);
@@ -72,14 +60,9 @@ legislatorsRouter.get('/:id/committees', validate(getLegislatorSchema, 'params')
 });
 
 // Get legislator's sponsored bills
-const legislatorBillsSchema = z.object({
-  primaryOnly: z.coerce.boolean().default(false),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
 legislatorsRouter.get(
   '/:id/bills',
+  validateLegislatorIdParam,
   validate(getLegislatorSchema, 'params'),
   validate(legislatorBillsSchema, 'query'),
   async (req, res, next) => {
@@ -95,13 +78,9 @@ legislatorsRouter.get(
 );
 
 // Get legislator's voting record
-const legislatorVotesSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
 legislatorsRouter.get(
   '/:id/votes',
+  validateLegislatorIdParam,
   validate(getLegislatorSchema, 'params'),
   validate(legislatorVotesSchema, 'query'),
   async (req, res, next) => {
@@ -119,6 +98,7 @@ legislatorsRouter.get(
 // Alias: voting-record -> votes (for API consistency)
 legislatorsRouter.get(
   '/:id/voting-record',
+  validateLegislatorIdParam,
   validate(getLegislatorSchema, 'params'),
   validate(legislatorVotesSchema, 'query'),
   async (req, res, next) => {
@@ -134,7 +114,7 @@ legislatorsRouter.get(
 );
 
 // Get legislator's statistics
-legislatorsRouter.get('/:id/stats', validate(getLegislatorSchema, 'params'), async (req, res, next) => {
+legislatorsRouter.get('/:id/stats', validateLegislatorIdParam, validate(getLegislatorSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getLegislatorSchema.parse(req.params);
     const stats = await legislatorService.getStats(id);

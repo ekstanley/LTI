@@ -7,6 +7,7 @@
     "paths": {
       "@/*": ["./src/*"],
       "@ltip/shared": ["../../packages/shared/src"],
+      "@ltip/shared/validation": ["../../packages/shared/src/validation"],
       "@ltip/shared/*": ["../../packages/shared/src/*"]
     }
   },
