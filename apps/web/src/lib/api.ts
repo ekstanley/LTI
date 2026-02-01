@@ -872,7 +872,7 @@ export async function getBillAnalysis(billId: string, signal?: AbortSignal): Pro
 // Legislators API
 // ============================================================================
 
-export interface LegislatorsQueryParams {
+export interface LegislatorsQueryParams extends Record<string, unknown> {
   chamber?: string;
   party?: string;
   state?: string;
@@ -926,7 +926,7 @@ export async function getLegislator(id: string, signal?: AbortSignal): Promise<L
 // Votes API
 // ============================================================================
 
-export interface VotesQueryParams {
+export interface VotesQueryParams extends Record<string, unknown> {
   chamber?: string;
   billId?: string;
   result?: string;
