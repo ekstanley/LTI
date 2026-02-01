@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 import { authRateLimiter } from '../../middleware/authRateLimiter.js';
 
 // Mock logger to avoid noise in tests
@@ -21,8 +21,6 @@ vi.mock('../../lib/logger.js', () => ({
 
 describe('authRateLimiter', () => {
   let mockReq: Partial<Request>;
-  let mockRes: Partial<Response>;
-  let mockNext: NextFunction;
 
   beforeEach(() => {
     mockReq = {
@@ -31,13 +29,6 @@ describe('authRateLimiter', () => {
       headers: {},
       ip: '127.0.0.1',
     };
-    mockRes = {
-      setHeader: vi.fn(),
-      json: vi.fn(),
-      status: vi.fn().mockReturnThis(),
-      send: vi.fn(),
-    };
-    mockNext = vi.fn();
     vi.clearAllMocks();
   });
 

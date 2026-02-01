@@ -2,7 +2,7 @@
  * CSRF Service Tests
  * @module services/__tests__/csrf.service.test
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as crypto from 'node:crypto';
 import * as csrfService from '../csrf.service.js';
 import * as redis from '../../db/redis.js';
@@ -29,7 +29,7 @@ describe('CSRF Service', () => {
 
     // Mock crypto.randomBytes to return predictable value
     vi.mocked(crypto.randomBytes).mockReturnValue(
-      Buffer.from('a'.repeat(32))
+      Buffer.from('a'.repeat(32)) as never
     );
 
     // Mock buildCacheKey

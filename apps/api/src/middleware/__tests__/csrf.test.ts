@@ -20,8 +20,12 @@ vi.mock('../../lib/logger.js', () => ({
   },
 }));
 
+interface RequestWithSession extends Request {
+  session?: { id: string };
+}
+
 describe('CSRF Middleware', () => {
-  let mockReq: Partial<Request>;
+  let mockReq: Partial<RequestWithSession>;
   let mockRes: Partial<Response>;
   let mockNext: NextFunction;
 
@@ -30,7 +34,7 @@ describe('CSRF Middleware', () => {
       method: 'POST',
       path: '/api/test',
       headers: {},
-      session: { id: 'test-session-123' } as any,
+      session: { id: 'test-session-123' },
     };
     mockRes = {
       setHeader: vi.fn(),
@@ -45,7 +49,7 @@ describe('CSRF Middleware', () => {
     it('should allow GET requests without CSRF token', async () => {
       mockReq.method = 'GET';
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
       expect(csrfService.validateCsrfToken).not.toHaveBeenCalled();
@@ -54,7 +58,7 @@ describe('CSRF Middleware', () => {
     it('should allow HEAD requests without CSRF token', async () => {
       mockReq.method = 'HEAD';
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
     });
@@ -62,7 +66,7 @@ describe('CSRF Middleware', () => {
     it('should allow OPTIONS requests without CSRF token', async () => {
       mockReq.method = 'OPTIONS';
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
     });
@@ -70,7 +74,7 @@ describe('CSRF Middleware', () => {
     it('should reject POST without session', async () => {
       delete mockReq.session;
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 401,
@@ -79,7 +83,7 @@ describe('CSRF Middleware', () => {
     });
 
     it('should reject POST without CSRF token', async () => {
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 403,
@@ -91,7 +95,7 @@ describe('CSRF Middleware', () => {
       mockReq.headers = { 'x-csrf-token': 'invalid-token' };
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(false);
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.validateCsrfToken).toHaveBeenCalledWith('test-session-123', 'invalid-token');
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
@@ -108,7 +112,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue(newToken);
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.validateCsrfToken).toHaveBeenCalledWith('test-session-123', validToken);
       expect(csrfService.invalidateCsrfToken).toHaveBeenCalledWith('test-session-123', validToken);
@@ -123,7 +127,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue('new-token');
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.validateCsrfToken).toHaveBeenCalled();
       expect(mockNext).toHaveBeenCalledWith();
@@ -135,7 +139,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue('new-token');
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.validateCsrfToken).toHaveBeenCalled();
     });
@@ -146,7 +150,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue('new-token');
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.validateCsrfToken).toHaveBeenCalled();
     });
@@ -155,7 +159,7 @@ describe('CSRF Middleware', () => {
       mockReq.headers = { 'x-csrf-token': 'token' };
       vi.mocked(csrfService.validateCsrfToken).mockRejectedValue(new Error('Redis error'));
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 500,
@@ -167,7 +171,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockRejectedValue(new Error('Generation failed'));
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -177,7 +181,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue('new-token');
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.invalidateCsrfToken).toHaveBeenCalledWith('test-session-123', 'token-123');
     });
@@ -185,7 +189,7 @@ describe('CSRF Middleware', () => {
     it('should reject array header values', async () => {
       mockReq.headers = { 'x-csrf-token': ['token1', 'token2'] };
 
-      await csrfProtection(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtection(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 403,
@@ -198,14 +202,14 @@ describe('CSRF Middleware', () => {
     it('should allow requests without session', async () => {
       delete mockReq.session;
 
-      await csrfProtectionOptional(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtectionOptional(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
       expect(csrfService.validateCsrfToken).not.toHaveBeenCalled();
     });
 
     it('should allow requests with session but no token', async () => {
-      await csrfProtectionOptional(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtectionOptional(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith();
       expect(csrfService.validateCsrfToken).not.toHaveBeenCalled();
@@ -216,7 +220,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(true);
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue('new-token');
 
-      await csrfProtectionOptional(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtectionOptional(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(csrfService.validateCsrfToken).toHaveBeenCalled();
       expect(mockNext).toHaveBeenCalledWith();
@@ -226,7 +230,7 @@ describe('CSRF Middleware', () => {
       mockReq.headers = { 'x-csrf-token': 'bad-token' };
       vi.mocked(csrfService.validateCsrfToken).mockResolvedValue(false);
 
-      await csrfProtectionOptional(mockReq as Request, mockRes as Response, mockNext);
+      await csrfProtectionOptional(mockReq as RequestWithSession, mockRes as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({
         statusCode: 403,
@@ -239,7 +243,7 @@ describe('CSRF Middleware', () => {
       const newToken = 'generated-token-789';
       vi.mocked(csrfService.generateCsrfToken).mockResolvedValue(newToken);
 
-      await getCsrfToken(mockReq as Request, mockRes as Response);
+      await getCsrfToken(mockReq as RequestWithSession, mockRes as Response);
 
       expect(csrfService.generateCsrfToken).toHaveBeenCalledWith('test-session-123');
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-CSRF-Token', newToken);
@@ -250,7 +254,7 @@ describe('CSRF Middleware', () => {
       delete mockReq.session;
 
       await expect(
-        getCsrfToken(mockReq as Request, mockRes as Response)
+        getCsrfToken(mockReq as RequestWithSession, mockRes as Response)
       ).rejects.toThrow();
     });
 
@@ -258,7 +262,7 @@ describe('CSRF Middleware', () => {
       vi.mocked(csrfService.generateCsrfToken).mockRejectedValue(new Error('Failed'));
 
       await expect(
-        getCsrfToken(mockReq as Request, mockRes as Response)
+        getCsrfToken(mockReq as RequestWithSession, mockRes as Response)
       ).rejects.toThrow();
     });
   });

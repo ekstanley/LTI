@@ -588,7 +588,10 @@ describe('Account Lockout Protection (CWE-307)', () => {
         select: { accountLockedUntil: true },
       });
 
-      const lockoutDuration = user?.accountLockedUntil!.getTime() - Date.now();
+      expect(user).toBeDefined();
+      expect(user?.accountLockedUntil).toBeDefined();
+
+      const lockoutDuration = user!.accountLockedUntil!.getTime() - Date.now();
       const fifteenMinutesInMs = 15 * 60 * 1000;
 
       // Should be approximately 15 minutes (within 2 seconds tolerance)

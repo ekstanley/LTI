@@ -5,22 +5,11 @@
 
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { isValidLegislatorId } from '@ltip/shared/validation';
 import { LegislatorDetailClient } from './LegislatorDetailClient';
 
 interface LegislatorPageProps {
   params: Promise<{ id: string }>;
-}
-
-/**
- * Validates legislator ID format (Bioguide ID)
- * Example: "A000360"
- * @param id - Legislator ID to validate
- * @returns true if valid, false otherwise
- */
-function isValidLegislatorId(id: string): boolean {
-  // Format: One uppercase letter followed by 6 digits (Bioguide ID)
-  // Examples: A000360, S001198, M001111
-  return /^[A-Z][0-9]{6}$/.test(id);
 }
 
 export async function generateMetadata({ params }: LegislatorPageProps): Promise<Metadata> {
