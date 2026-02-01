@@ -16,8 +16,11 @@ interface ErrorProps {
 
 export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // Log error to monitoring service in production
-    console.error('Route error:', error);
+    // Only log errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Route error:', error);
+    }
+    // TODO: Send error to monitoring service (Sentry, LogRocket, etc.) in production
   }, [error]);
 
   return (

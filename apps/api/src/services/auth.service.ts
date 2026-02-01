@@ -190,6 +190,8 @@ export const authService = {
 
       // No password set (OAuth-only user)
       if (!user.passwordHash) {
+        // Perform dummy hash to prevent timing attacks
+        await passwordService.hash('dummy-password-for-timing');
         return { success: false, error: 'invalid_credentials' };
       }
 
@@ -215,32 +217,34 @@ export const authService = {
 
       if (!verification.valid) {
         // Track failed login attempt (CWE-307 protection)
-        const failedAttempts = user.failedLoginAttempts + 1;
+        // Use Prisma's atomic increment to prevent race conditions (CWE-362)
+        const updatedUser = await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            failedLoginAttempts: { increment: 1 },
+            lastFailedLoginAt: now,
+          },
+          select: { id: true, failedLoginAttempts: true },
+        });
+
+        const failedAttempts = updatedUser.failedLoginAttempts;
         const MAX_FAILED_ATTEMPTS = 5;
         const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
-        const updateData: {
-          failedLoginAttempts: number;
-          lastFailedLoginAt: Date;
-          accountLockedUntil?: Date;
-        } = {
-          failedLoginAttempts: failedAttempts,
-          lastFailedLoginAt: now,
-        };
-
-        // Lock account if threshold exceeded
+        // Lock account if threshold exceeded after atomic increment
         if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-          updateData.accountLockedUntil = new Date(now.getTime() + LOCKOUT_DURATION_MS);
+          const lockoutUntil = new Date(now.getTime() + LOCKOUT_DURATION_MS);
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              accountLockedUntil: lockoutUntil,
+            },
+          });
           logger.warn(
-            { userId: user.id, failedAttempts, lockedUntil: updateData.accountLockedUntil },
+            { userId: user.id, failedAttempts, lockedUntil: lockoutUntil },
             'SECURITY: Account locked due to excessive failed login attempts'
           );
         }
-
-        await prisma.user.update({
-          where: { id: user.id },
-          data: updateData,
-        });
 
         return { success: false, error: 'invalid_credentials' };
       }

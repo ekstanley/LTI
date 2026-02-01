@@ -6,7 +6,7 @@
 
 'use client';
 
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import {
   Vote as VoteIcon,
@@ -232,14 +232,22 @@ export function VotesPageClient() {
   });
 
   // Set up polling interval for live updates
+  // Note: SWR's mutate function is stable, but we use useRef to ensure
+  // the interval is only created once and properly cleaned up on unmount
+  const mutateRef = useRef(mutate);
+
+  useEffect(() => {
+    mutateRef.current = mutate;
+  }, [mutate]);
+
   useEffect(() => {
     const interval = setInterval(() => {
-      mutate();
+      mutateRef.current();
       setLastUpdated(new Date());
     }, POLL_INTERVAL);
 
     return () => clearInterval(interval);
-  }, [mutate]);
+  }, []); // Empty deps: set up interval once on mount, cleanup on unmount
 
   // Handlers
   const handleChamberChange = useCallback((value: ChamberFilter) => {

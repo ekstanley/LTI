@@ -6,6 +6,7 @@
 import useSWR from 'swr';
 import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
 import { getBills, getBill, type BillsQueryParams } from '@/lib/api';
+import { createStableCacheKey } from '@/lib/utils/swr';
 
 export interface UseBillsOptions extends BillsQueryParams {
   /** Enable/disable fetching */
@@ -35,16 +36,20 @@ export interface UseBillsResult {
 export function useBills(options: UseBillsOptions = {}): UseBillsResult {
   const { enabled = true, ...params } = options;
 
-  // Build cache key from params
-  const key = enabled ? ['bills', JSON.stringify(params)] : null;
+  // Build stable cache key from params (prevents cache collisions)
+  const key = enabled ? createStableCacheKey('bills', params) : null;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     PaginatedResponse<Bill>,
     Error
-  >(key, () => getBills(params), {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
-  });
+  >(
+    key,
+    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getBills(params, signal),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    }
+  );
 
   return {
     bills: data?.data ?? [],
@@ -67,7 +72,10 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
 export function useBill(id: string | null) {
   const { data, error, isLoading, isValidating, mutate } = useSWR<Bill, Error>(
     id ? ['bill', id] : null,
-    () => getBill(id!),
+    async (_key: [string, string] | null, { signal }: { signal?: AbortSignal } = {}) => {
+      if (!id) throw new Error('Bill ID is required');
+      return getBill(id, signal);
+    },
     {
       revalidateOnFocus: false,
     }

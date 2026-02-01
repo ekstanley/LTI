@@ -609,6 +609,11 @@ model User {
   isActive    Boolean   @default(true)
   lastLoginAt DateTime?
 
+  // Account lockout protection (prevents brute-force attacks)
+  failedLoginAttempts Int       @default(0)
+  lastFailedLoginAt   DateTime?
+  accountLockedUntil  DateTime?
+
   // Rate limiting
   rateLimit Int @default(100) // Requests per minute
 

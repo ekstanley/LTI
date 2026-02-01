@@ -558,7 +558,7 @@ describe('API Client', () => {
       it('should throw on failed token fetch', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: false,
-          status: 500,
+          status: 400,
           headers: new Headers(),
           json: async () => ({}),
         });
@@ -693,7 +693,7 @@ describe('API Client', () => {
         // Token refresh fails
         mockFetch.mockResolvedValueOnce({
           ok: false,
-          status: 500,
+          status: 400,
           headers: new Headers(),
           json: async () => ({}),
         });
@@ -701,7 +701,7 @@ describe('API Client', () => {
         const promise = getBills();
 
         await expect(promise).rejects.toThrow(CsrfTokenError);
-        await expect(promise).rejects.toThrow('Failed to refresh CSRF token');
+        await expect(promise).rejects.toThrow('Security token invalid. Please refresh and try again.');
       });
 
       it('should not retry on 403 without CSRF_TOKEN_INVALID code', async () => {
@@ -758,6 +758,232 @@ describe('API Client', () => {
         await checkHealth();
 
         expect(getCsrfToken()).toBe(initialToken);
+      });
+    });
+
+    // ============================================================================
+    // H-2: CSRF Refresh Limit Protection (DoS Prevention)
+    // ============================================================================
+
+    describe('MAX_CSRF_REFRESH_ATTEMPTS Enforcement (H-2 Security Fix)', () => {
+      it('should throw CsrfTokenError after MAX_CSRF_REFRESH_ATTEMPTS exceeded', async () => {
+        // Set up initial CSRF token
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'initial-token' }),
+        });
+        await fetchCsrfToken();
+
+        // First CSRF_TOKEN_INVALID: counter = 1
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // First refresh succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'refreshed-token-1' }),
+        });
+
+        // Second CSRF_TOKEN_INVALID: counter = 2
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // Second refresh succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'refreshed-token-2' }),
+        });
+
+        // Third CSRF_TOKEN_INVALID: counter = 3 → LIMIT EXCEEDED
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // Attempt getBills - should throw after MAX_CSRF_REFRESH_ATTEMPTS
+        const promise = getBills();
+
+        await expect(promise).rejects.toThrow(CsrfTokenError);
+        await expect(promise).rejects.toThrow('Security token invalid. Please refresh and try again.');
+
+        // Verify: 1 initial fetch + 3 CSRF_TOKEN_INVALID + 2 successful refreshes = 6 calls
+        expect(mockFetch).toHaveBeenCalledTimes(6);
+      });
+
+      it('should enforce exact limit boundary (MAX = 2)', async () => {
+        // Set up initial CSRF token
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'initial-token' }),
+        });
+        await fetchCsrfToken();
+
+        // First CSRF_TOKEN_INVALID: counter = 1
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // First refresh succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'refreshed-token-1' }),
+        });
+
+        // Second CSRF_TOKEN_INVALID: counter = 2 (AT THE LIMIT)
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // Second refresh succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'refreshed-token-2' }),
+        });
+
+        // Third CSRF_TOKEN_INVALID: counter = 3 (EXCEEDS LIMIT)
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // Should throw when counter > MAX_CSRF_REFRESH_ATTEMPTS (> 2)
+        const promise = getBills();
+
+        await expect(promise).rejects.toThrow(CsrfTokenError);
+        await expect(promise).rejects.toThrow('Security token invalid. Please refresh and try again.');
+      });
+
+      it('should reset counter for each new request', async () => {
+        // Set up initial CSRF token
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'initial-token' }),
+        });
+        await fetchCsrfToken();
+
+        // ===== FIRST REQUEST =====
+        // CSRF_TOKEN_INVALID: counter = 1
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // Refresh succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'refreshed-token-1' }),
+        });
+
+        // Retry with new token succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ data: [] }),
+        });
+
+        // First request completes successfully
+        await expect(getBills()).resolves.toBeTruthy();
+
+        // ===== SECOND REQUEST (Counter should be reset to 0) =====
+        // CSRF_TOKEN_INVALID: counter = 1 (reset for new request)
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 403,
+          headers: new Headers(),
+          json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+        });
+
+        // Refresh succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'refreshed-token-2' }),
+        });
+
+        // Retry with new token succeeds
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ data: [] }),
+        });
+
+        // Second request completes successfully (proves counter was reset)
+        await expect(getBills()).resolves.toBeTruthy();
+      });
+
+      it('should include user-friendly error message on limit exceeded', async () => {
+        // Set up initial CSRF token
+        mockFetch.mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          headers: new Headers(),
+          json: async () => ({ csrfToken: 'initial-token' }),
+        });
+        await fetchCsrfToken();
+
+        // Trigger 3 consecutive CSRF_TOKEN_INVALID responses
+        for (let i = 0; i < 3; i++) {
+          mockFetch.mockResolvedValueOnce({
+            ok: false,
+            status: 403,
+            headers: new Headers(),
+            json: async () => ({ code: 'CSRF_TOKEN_INVALID', message: 'Invalid token' }),
+          });
+
+          // Only first 2 refreshes should succeed (before limit exceeded)
+          if (i < 2) {
+            mockFetch.mockResolvedValueOnce({
+              ok: true,
+              status: 200,
+              headers: new Headers(),
+              json: async () => ({ csrfToken: `refreshed-token-${i + 1}` }),
+            });
+          }
+        }
+
+        const promise = getBills();
+
+        await expect(promise).rejects.toThrow(CsrfTokenError);
+        await expect(promise).rejects.toThrow('Security token invalid. Please refresh and try again.');
       });
     });
   });

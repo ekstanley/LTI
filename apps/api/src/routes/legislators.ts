@@ -1,20 +1,10 @@
 import { Router, type Router as RouterType } from 'express';
-import { z } from 'zod';
 import { validate } from '../middleware/validate.js';
 import { ApiError } from '../middleware/error.js';
 import { legislatorService } from '../services/index.js';
+import { listLegislatorsSchema, getLegislatorSchema, legislatorBillsSchema, legislatorVotesSchema } from '../schemas/legislators.schema.js';
 
 export const legislatorsRouter: RouterType = Router();
-
-const listLegislatorsSchema = z.object({
-  chamber: z.enum(['house', 'senate']).optional(),
-  party: z.enum(['D', 'R', 'I', 'L', 'G']).optional(),
-  state: z.string().length(2).toUpperCase().optional(),
-  search: z.string().max(100).optional(),
-  inOffice: z.coerce.boolean().optional(),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
 
 // Get all legislators with filtering and pagination
 legislatorsRouter.get('/', validate(listLegislatorsSchema, 'query'), async (req, res, next) => {
@@ -36,10 +26,7 @@ legislatorsRouter.get('/', validate(listLegislatorsSchema, 'query'), async (req,
 });
 
 // Get single legislator by ID
-const getLegislatorSchema = z.object({
-  id: z.string().min(1),
-});
-
+// ID validation: bioguideId format (1 uppercase letter + 6 digits) or alphanumeric
 legislatorsRouter.get('/:id', validate(getLegislatorSchema, 'params'), async (req, res, next) => {
   try {
     const { id } = getLegislatorSchema.parse(req.params);
@@ -72,12 +59,6 @@ legislatorsRouter.get('/:id/committees', validate(getLegislatorSchema, 'params')
 });
 
 // Get legislator's sponsored bills
-const legislatorBillsSchema = z.object({
-  primaryOnly: z.coerce.boolean().default(false),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
 legislatorsRouter.get(
   '/:id/bills',
   validate(getLegislatorSchema, 'params'),
@@ -95,11 +76,6 @@ legislatorsRouter.get(
 );
 
 // Get legislator's voting record
-const legislatorVotesSchema = z.object({
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  offset: z.coerce.number().int().min(0).default(0),
-});
-
 legislatorsRouter.get(
   '/:id/votes',
   validate(getLegislatorSchema, 'params'),

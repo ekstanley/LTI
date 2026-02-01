@@ -6,6 +6,7 @@
 import useSWR from 'swr';
 import type { Legislator, PaginatedResponse, Pagination } from '@ltip/shared';
 import { getLegislators, getLegislator, type LegislatorsQueryParams } from '@/lib/api';
+import { createStableCacheKey } from '@/lib/utils/swr';
 
 export interface UseLegislatorsOptions extends LegislatorsQueryParams {
   /** Enable/disable fetching */
@@ -36,16 +37,20 @@ export interface UseLegislatorsResult {
 export function useLegislators(options: UseLegislatorsOptions = {}): UseLegislatorsResult {
   const { enabled = true, ...params } = options;
 
-  // Build cache key from params
-  const key = enabled ? ['legislators', JSON.stringify(params)] : null;
+  // Build stable cache key from params (prevents cache collisions)
+  const key = enabled ? createStableCacheKey('legislators', params) : null;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     PaginatedResponse<Legislator>,
     Error
-  >(key, () => getLegislators(params), {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
-  });
+  >(
+    key,
+    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getLegislators(params, signal),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    }
+  );
 
   return {
     legislators: data?.data ?? [],
@@ -68,7 +73,10 @@ export function useLegislators(options: UseLegislatorsOptions = {}): UseLegislat
 export function useLegislator(id: string | null) {
   const { data, error, isLoading, isValidating, mutate } = useSWR<Legislator, Error>(
     id ? ['legislator', id] : null,
-    () => getLegislator(id!),
+    async (_key: [string, string] | null, { signal }: { signal?: AbortSignal } = {}) => {
+      if (!id) throw new Error('Legislator ID is required');
+      return getLegislator(id, signal);
+    },
     {
       revalidateOnFocus: false,
     }

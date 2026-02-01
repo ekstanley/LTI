@@ -518,6 +518,30 @@ function generateBillIdFromVote(bill: { congress: number; type: string; number: 
 }
 
 /**
+ * Parse vote date from API response with robust handling
+ *
+ * Handles undefined, empty strings, and invalid date formats.
+ * Returns current date as fallback to ensure import doesn't fail
+ * on missing date data (can be corrected later via data cleanup).
+ */
+function parseVoteDate(dateStr: string | undefined | null): Date {
+  if (!dateStr || dateStr.trim() === '') {
+    // Missing date - use current date as placeholder
+    return new Date();
+  }
+
+  const parsed = new Date(dateStr);
+
+  // Check for "Invalid Date"
+  if (isNaN(parsed.getTime())) {
+    // Invalid format - use current date as placeholder
+    return new Date();
+  }
+
+  return parsed;
+}
+
+/**
  * Transform API vote detail to database format
  */
 function transformRollCallVote(
@@ -562,7 +586,8 @@ function transformRollCallVote(
     present: detail.votePartyTotal?.reduce((sum, p) => sum + (p.presentTotal ?? 0), 0) ?? 0,
     notVoting: detail.votePartyTotal?.reduce((sum, p) => sum + (p.notVotingTotal ?? 0), 0) ?? 0,
     tieBreakerVp: detail.tieBreakerVp ?? null,
-    voteDate: new Date(detail.startDate),
+    // Robust date parsing: handle undefined, empty, or invalid dates
+    voteDate: parseVoteDate(detail.startDate),
     dataSource: 'CONGRESS_GOV',
     lastSyncedAt: new Date(),
   };

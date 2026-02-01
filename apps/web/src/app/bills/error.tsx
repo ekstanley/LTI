@@ -16,7 +16,11 @@ interface ErrorProps {
 
 export default function BillsError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('Bills route error:', error);
+    // Only log errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Bills route error:', error);
+    }
+    // TODO: Send to monitoring service (Sentry, LogRocket, etc.) in production
   }, [error]);
 
   return (

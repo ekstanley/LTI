@@ -6,6 +6,7 @@
 import useSWR from 'swr';
 import type { Vote, PaginatedResponse, Pagination } from '@ltip/shared';
 import { getVotes, getVote, type VotesQueryParams } from '@/lib/api';
+import { createStableCacheKey } from '@/lib/utils/swr';
 
 export interface UseVotesOptions extends VotesQueryParams {
   /** Enable/disable fetching */
@@ -35,16 +36,20 @@ export interface UseVotesResult {
 export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
   const { enabled = true, ...params } = options;
 
-  // Build cache key from params
-  const key = enabled ? ['votes', JSON.stringify(params)] : null;
+  // Build stable cache key from params (prevents cache collisions)
+  const key = enabled ? createStableCacheKey('votes', params) : null;
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     PaginatedResponse<Vote>,
     Error
-  >(key, () => getVotes(params), {
-    revalidateOnFocus: false,
-    dedupingInterval: 5000,
-  });
+  >(
+    key,
+    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getVotes(params, signal),
+    {
+      revalidateOnFocus: false,
+      dedupingInterval: 5000,
+    }
+  );
 
   return {
     votes: data?.data ?? [],
@@ -67,7 +72,10 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
 export function useVote(id: string | null) {
   const { data, error, isLoading, isValidating, mutate } = useSWR<Vote, Error>(
     id ? ['vote', id] : null,
-    () => getVote(id!),
+    async (_key: [string, string] | null, { signal }: { signal?: AbortSignal } = {}) => {
+      if (!id) throw new Error('Vote ID is required');
+      return getVote(id, signal);
+    },
     {
       revalidateOnFocus: false,
     }

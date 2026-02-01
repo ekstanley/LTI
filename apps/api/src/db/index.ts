@@ -17,6 +17,8 @@ export {
 export {
   cache,
   getCache,
+  getCacheType,
+  initializeCache,
   buildCacheKey,
   disconnectCache,
   checkCacheHealth,

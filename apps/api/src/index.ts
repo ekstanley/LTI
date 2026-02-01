@@ -18,6 +18,7 @@ import { conflictsRouter } from './routes/conflicts.js';
 import { committeesRouter } from './routes/committees.js';
 import { authRouter } from './routes/auth.js';
 import { setupWebSocket } from './websocket/index.js';
+import { initializeCache, disconnectCache, getCacheType } from './db/redis.js';
 
 const app = express();
 
@@ -52,6 +53,15 @@ app.use(
     crossOriginResourcePolicy: { policy: 'same-origin' },
   })
 );
+
+// Permissions-Policy header - restrict browser features not needed by API
+app.use((_req, res, next) => {
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=(), interest-cohort=(), payment=(), usb=(), bluetooth=(), midi=(), magnetometer=(), gyroscope=(), accelerometer=()'
+  );
+  next();
+});
 app.use(
   cors({
     origin: config.corsOrigins,
@@ -98,14 +108,25 @@ const server = createServer(app);
 // Setup WebSocket server
 setupWebSocket(server);
 
-// Start server
-server.listen(config.port, () => {
-  logger.info({ port: config.port }, 'Server started');
-});
+// Bootstrap server with async initialization
+async function bootstrap() {
+  // Initialize cache (Redis or fallback to memory)
+  await initializeCache();
+  logger.info({ cacheType: getCacheType() }, 'Cache initialized');
+
+  // Start server
+  server.listen(config.port, () => {
+    logger.info({ port: config.port, cacheType: getCacheType() }, 'Server started');
+  });
+}
 
 // Graceful shutdown
 const shutdown = () => {
   logger.info('Shutting down gracefully...');
+
+  // Disconnect cache
+  disconnectCache();
+
   server.close(() => {
     logger.info('Server closed');
     process.exit(0);
@@ -120,3 +141,9 @@ const shutdown = () => {
 
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
+
+// Start server
+bootstrap().catch((err) => {
+  logger.error({ error: err }, 'Failed to start server');
+  process.exit(1);
+});
