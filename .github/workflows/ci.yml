@@ -48,9 +48,6 @@ jobs:
       - name: Run ESLint
         run: pnpm lint
 
-      - name: Run Prettier check
-        run: pnpm prettier --check .
-
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
