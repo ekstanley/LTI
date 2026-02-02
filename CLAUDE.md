@@ -389,6 +389,144 @@ export function BillFilters({ filters, onChange, onClear, isLoading }: BillFilte
 }
 ```
 
+### Authentication Pattern (AuthContext)
+
+**Using authentication in components**:
+
+```typescript
+// apps/web/src/app/dashboard/page.tsx
+'use client';
+
+import { useAuth } from '@/hooks/useAuth';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+}
+
+function Dashboard() {
+  const { user, logout, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h1>Welcome, {user?.name}!</h1>
+      <p>Email: {user?.email}</p>
+      <p>Role: {user?.role}</p>
+      <button onClick={() => void logout()}>Logout</button>
+    </div>
+  );
+}
+```
+
+**Login page example**:
+
+```typescript
+// apps/web/src/app/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+export default function LoginPage() {
+  const { login, isLoading, error } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      await login(email, password);
+
+      // Redirect to return URL or dashboard
+      const returnUrl = searchParams.get('return') || '/dashboard';
+      router.push(returnUrl);
+    } catch (err) {
+      // Error is already set in auth state
+      console.error('Login failed:', err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h1>Login</h1>
+
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? 'Logging in...' : 'Login'}
+      </button>
+    </form>
+  );
+}
+```
+
+**AuthProvider setup** (in app layout):
+
+```typescript
+// apps/web/src/app/layout.tsx
+import { AuthProvider } from '@/contexts/AuthContext';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**Key features**:
+- ✅ Session persistence in localStorage
+- ✅ Automatic token refresh every 5 minutes
+- ✅ CSRF token management
+- ✅ Protected route wrapper component
+- ✅ Loading and error states
+- ✅ Type-safe with TypeScript
+
 ### Custom Hook Pattern
 
 ```typescript

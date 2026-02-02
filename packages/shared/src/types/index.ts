@@ -229,3 +229,54 @@ export interface BillStatusChangeEvent {
 }
 
 export type WebSocketEvent = VoteUpdateEvent | TallyUpdateEvent | BillStatusChangeEvent;
+
+// ============================================================================
+// Authentication Types
+// ============================================================================
+
+/**
+ * User role type
+ */
+export type UserRole = 'admin' | 'user';
+
+/**
+ * Authenticated user
+ */
+export interface User {
+  /** Unique user identifier */
+  id: string;
+  /** User email address */
+  email: string;
+  /** User display name */
+  name: string;
+  /** User role */
+  role: UserRole;
+}
+
+/**
+ * Login request payload
+ */
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/**
+ * Login response payload
+ */
+export interface LoginResponse {
+  /** JWT authentication token */
+  token: string;
+  /** Authenticated user data */
+  user: User;
+}
+
+/**
+ * Token refresh response payload
+ */
+export interface RefreshTokenResponse {
+  /** New JWT authentication token */
+  token: string;
+  /** Updated user data */
+  user: User;
+}
