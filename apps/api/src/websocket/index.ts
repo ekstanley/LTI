@@ -195,7 +195,14 @@ function handleConnection(ws: WebSocket, req: IncomingMessage): void {
 function handleMessage(ws: ExtendedWebSocket, data: Buffer | ArrayBuffer | Buffer[]): void {
   try {
     // Convert data to string for JSON parsing
-    const dataStr = Buffer.isBuffer(data) ? data.toString() : new TextDecoder().decode(data);
+    let dataStr: string;
+    if (Buffer.isBuffer(data)) {
+      dataStr = data.toString();
+    } else if (Array.isArray(data)) {
+      dataStr = Buffer.concat(data).toString();
+    } else {
+      dataStr = new TextDecoder().decode(data);
+    }
     const message = JSON.parse(dataStr) as ClientMessage;
     logger.debug({ clientId: ws.clientId, type: message.type }, 'Message received');
 
