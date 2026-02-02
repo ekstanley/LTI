@@ -48,13 +48,15 @@ WP10 Security Hardening Remediation successfully resolved all 8 critical gaps id
 | **Test Suite** | 100% passing | 60/60 tests pass | ✅ PASS |
 | **Code Quality** | No regressions | Maintained | ✅ PASS |
 | **Security Audit** | Acceptable risk | 3 vulnerabilities (1 high Next.js, 2 moderate) | ✅ PASS* |
-| **Visual Verification** | All scenarios | 10/10 screenshots | ✅ PASS |
+| **Visual Verification** | All scenarios | 17/17 WP10-specific screenshots | ✅ PASS |
 
 *High severity Next.js vulnerability (CVE DoS) requires Next.js upgrade (out of WP10 scope)
 
 ### Test Coverage Summary
 
-**Total: 60/60 tests passing (100%)**
+**Total: 60/60 WP10 tests passing (100%)**
+
+**Note**: The full test suite contains 477 tests. The 60 WP10 tests are a subset focused on validation functionality. WP10 also resolved 23 pre-existing auth.lockout test failures, improving the full suite from 454/477 (95.2%) to 477/477 (100%).
 
 1. **Shared Package (packages/shared)**: 44/44 tests ✅
    - Bills validation: 22/22 tests

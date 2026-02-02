@@ -161,7 +161,7 @@ All commits follow atomic commit strategy with Conventional Commits format:
 11. wp10-legislators-invalid-id-404.png - Additional legislator invalid ID verification
 
 **Total WP10-Specific Screenshots**: 17 (11 Phase 4 + 6 Final Verification)
-**Note**: docs/screenshots/ contains 67 total screenshots including 50 baseline documentation screenshots from earlier work packages
+**Note**: docs/screenshots/ contains 69 total screenshots including 52 baseline documentation screenshots from earlier work packages
 
 ---
 
@@ -202,6 +202,11 @@ All commits follow atomic commit strategy with Conventional Commits format:
 ### WP10 Component Dependencies (ODIN Methodology)
 
 **Dependency Flow**: Foundation → Enforcement → User-Facing → Verification
+
+**Legend**:
+- **↓ (Vertical arrows)**: Indicates dependency direction (upper layers depend on lower layers)
+- **ROLE**: Primary responsibility of this component layer
+- **DEPENDENCY**: Explicit dependencies on other layers
 
 ```
 ┌──────────────────────────────────────────────────────────┐
