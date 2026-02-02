@@ -19,7 +19,7 @@ WP10 Security Hardening Remediation successfully completed with **100% test cove
 - **Test Results**: 477/477 passing (100%) - improved from 454/477 (95.2%)
 - **Attack Vectors Blocked**: XSS, SQLi, Path Traversal, ReDoS, Format Bypass
 - **Performance**: <10ms validation overhead, <25ms 404 responses
-- **Deliverables**: 21 verification screenshots, 12 atomic commits, complete documentation
+- **Deliverables**: 17 WP10-specific verification screenshots, 12 atomic commits, complete documentation
 
 ---
 
@@ -56,6 +56,40 @@ Zero Failures:      ✅ All test suites passing
 | FCP | 164.00ms - 648.00ms | Good | First Contentful Paint |
 | Invalid ID Response | <25ms | Excellent | 404 responses |
 | Validation Overhead | <10ms | Excellent | Per-request validation |
+
+### Screenshot Evidence Mapping
+
+**Performance Claims → Screenshot Evidence**:
+
+| Claim | Evidence | Screenshot Reference |
+|-------|----------|---------------------|
+| TTFB 24.70ms - 583.00ms | Homepage performance metrics | `final-verification-01-homepage.png` |
+| Valid bill loading with TTFB 583ms | Bill detail page performance | `final-verification-02-valid-bill.png` |
+| Valid legislator loading with TTFB 434ms | Legislator detail page performance | `final-verification-05-valid-legislator.png` |
+| Invalid ID response <25ms | 404 response time measurement | `final-verification-03-invalid-bill-404.png`, `final-verification-06-invalid-legislator-404.png` |
+
+**Security Claims → Screenshot Evidence**:
+
+| Attack Vector | Status | Screenshot Evidence |
+|---------------|--------|---------------------|
+| **XSS Injection** | ✅ BLOCKED | Bills: `wp10-03-bill-xss-blocked.png`, `final-verification-04-xss-blocked.png` |
+| **XSS Injection** | ✅ BLOCKED | Legislators: `wp10-08-legislator-xss-blocked.png` |
+| **SQL Injection** | ✅ BLOCKED | Bills: `wp10-04-bill-sqli-blocked.png` |
+| **SQL Injection** | ✅ BLOCKED | Legislators: `wp10-09-legislator-sqli-blocked.png` |
+| **Path Traversal** | ✅ BLOCKED | Bills: `wp10-05-bill-path-traversal-blocked.png` |
+| **Path Traversal** | ✅ BLOCKED | Legislators: `wp10-10-legislator-path-traversal-blocked.png` |
+| **Invalid Bill IDs** | ✅ BLOCKED | `wp10-02-invalid-bill-404.png`, `final-verification-03-invalid-bill-404.png` |
+| **Invalid Legislator IDs** | ✅ BLOCKED | `wp10-07-invalid-legislator-404.png`, `wp10-legislators-invalid-id-404.png`, `final-verification-06-invalid-legislator-404.png` |
+| **Valid Bill IDs** | ✅ ALLOWED | `wp10-01-valid-bill-id.png`, `final-verification-02-valid-bill.png` |
+| **Valid Legislator IDs** | ✅ ALLOWED | `wp10-06-valid-legislator-id.png`, `final-verification-05-valid-legislator.png` |
+
+**Attack Vectors NOT Visually Demonstrated** (verified in unit/integration tests only):
+- **ReDoS (Regular Expression Denial of Service)**: Verified via integration tests with <10ms performance requirement (TC-INT-06)
+- **Format Bypass**: Verified via unit tests with comprehensive invalid character detection (44 unit tests in shared validation package)
+
+**Test File References**:
+- **Unit Tests**: `packages/shared/src/validation/__tests__/` (46 tests, 100% coverage)
+- **Integration Tests**: `apps/api/src/middleware/__tests__/routeValidation.test.ts` (16 tests, <10ms performance)
 
 ---
 
@@ -127,7 +161,7 @@ All commits follow atomic commit strategy with Conventional Commits format:
 11. wp10-legislators-invalid-id-404.png - Additional legislator invalid ID verification
 
 **Total WP10-Specific Screenshots**: 17 (11 Phase 4 + 6 Final Verification)
-**Note**: docs/screenshots/ contains 67 total screenshots including 50 baseline documentation screenshots from earlier work packages
+**Note**: docs/screenshots/ contains 69 total screenshots including 52 baseline documentation screenshots from earlier work packages
 
 ---
 
@@ -164,6 +198,62 @@ All commits follow atomic commit strategy with Conventional Commits format:
 │ - Transaction integrity                                     │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### WP10 Component Dependencies (ODIN Methodology)
+
+**Dependency Flow**: Foundation → Enforcement → User-Facing → Verification
+
+**Legend**:
+- **↓ (Vertical arrows)**: Indicates dependency direction (upper layers depend on lower layers)
+- **ROLE**: Primary responsibility of this component layer
+- **DEPENDENCY**: Explicit dependencies on other layers
+
+```
+┌──────────────────────────────────────────────────────────┐
+│  packages/shared/src/validation/                         │
+│  ├─ validators.ts (bills, legislators, common IDs)       │
+│  ├─ security.ts (XSS, SQLi, path traversal, ReDoS)      │
+│  └─ __tests__/ (46 unit tests, 100% coverage)           │
+│  ROLE: Foundation - Single source of truth               │
+└──────────────────────────────────────────────────────────┘
+                         ↓
+┌──────────────────────────────────────────────────────────┐
+│  apps/api/src/middleware/routeValidation.ts              │
+│  ├─ validateBillIdParam()                                │
+│  ├─ validateLegislatorIdParam()                          │
+│  └─ __tests__/ (16 integration tests, <10ms)            │
+│  ROLE: Enforcement - API layer protection                │
+│  DEPENDENCY: Imports from packages/shared/validation     │
+└──────────────────────────────────────────────────────────┘
+                         ↓
+┌──────────────────────────────────────────────────────────┐
+│  apps/web/src/app/                                       │
+│  ├─ bills/[id]/page.tsx (user-facing bill pages)        │
+│  └─ legislators/[id]/page.tsx (user-facing leg pages)   │
+│  ROLE: User-Facing - Frontend UI with validation        │
+│  DEPENDENCY: Uses same validation patterns as API        │
+└──────────────────────────────────────────────────────────┘
+                         ↓
+┌──────────────────────────────────────────────────────────┐
+│  Integration Test Suite                                  │
+│  ├─ apps/api/src/middleware/__tests__/                  │
+│  ├─ Verifies defense-in-depth across all layers         │
+│  └─ Playwright screenshots (17 visual verifications)    │
+│  ROLE: Verification - End-to-end validation              │
+│  DEPENDENCY: Tests entire validation stack               │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Critical Dependencies**:
+- **Runtime**: API middleware imports shared validation library at runtime
+- **Behavioral**: Frontend uses identical validation patterns (consistency)
+- **Test**: Integration tests depend on both API and shared packages
+- **Data Flow**: User input → Frontend → API Middleware → Backend → Database
+
+**Dependency Types**:
+- **Code Dependency** (packages/shared → apps/api): Direct import statements
+- **Pattern Dependency** (packages/shared → apps/web): Shared regex patterns
+- **Verification Dependency** (tests → all): Test suite validates full stack
 
 ### Shared Validation Library
 
@@ -217,7 +307,7 @@ All commits follow atomic commit strategy with Conventional Commits format:
 | Defense Layers | 4 layers | 4 layers | ✅ PASS |
 | Performance | <50ms validation | <10ms validation | ✅ PASS |
 | Documentation | Complete | 17 documents | ✅ PASS |
-| Visual Verification | All routes | 21 screenshots | ✅ PASS |
+| Visual Verification | All routes | 17 WP10-specific screenshots | ✅ PASS |
 | Attack Blocking | 5 vectors | 5 vectors blocked | ✅ PASS |
 | Code Quality | No violations | Clean | ✅ PASS |
 
