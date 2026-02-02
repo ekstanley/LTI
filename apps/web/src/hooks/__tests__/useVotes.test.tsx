@@ -54,27 +54,24 @@ describe('useVotes', () => {
     data: [
       {
         id: 'h1-119-1',
+        billId: 'hr-1-119',
         chamber: 'house',
-        congress: 119,
-        rollCall: 1,
+        session: 119,
+        rollCallNumber: 1,
         date: '2025-01-03',
         question: 'On Agreeing to the Resolution',
-        description: 'Test Vote Description',
-        result: 'Passed',
-        voteType: 'YEA-NAY',
-        bill: {
-          id: 'hr-1-119',
-          type: 'hr',
-          number: 1,
-          title: 'Test Bill',
-        },
+        result: 'passed',
+        yeas: 218,
+        nays: 212,
+        present: 1,
+        notVoting: 4,
       },
     ],
     pagination: {
-      currentPage: 1,
-      totalPages: 1,
-      totalItems: 1,
-      itemsPerPage: 20,
+      total: 1,
+      limit: 20,
+      offset: 0,
+      hasMore: false,
     },
   };
 
@@ -132,7 +129,7 @@ describe('useVotes', () => {
     });
 
     it('should handle multiple concurrent fetches with undefined signal', async () => {
-      vi.mocked(api.getVotes).mockImplementation(async (params, signal) => {
+      vi.mocked(api.getVotes).mockImplementation(async (_params, signal) => {
         expect(signal).toBeUndefined();
         return mockVotesResponse;
       });
@@ -271,8 +268,8 @@ describe('useVotes', () => {
       vi.mocked(api.getVotes).mockResolvedValue(mockVotesResponse);
 
       const { result, rerender } = renderHook(
-        ({ enabled }) => useVotes({ limit: 20, enabled }, { wrapper: createWrapper() }),
-        { initialProps: { enabled: false } }
+        ({ enabled }) => useVotes({ limit: 20, enabled }),
+        { initialProps: { enabled: false }, wrapper: createWrapper() }
       );
 
       expect(api.getVotes).not.toHaveBeenCalled();
@@ -345,20 +342,17 @@ describe('useVotes', () => {
 describe('useVote', () => {
   const mockVote: Vote = {
     id: 'h1-119-1',
+    billId: 'hr-1-119',
     chamber: 'house',
-    congress: 119,
-    rollCall: 1,
+    session: 119,
+    rollCallNumber: 1,
     date: '2025-01-03',
     question: 'On Agreeing to the Resolution',
-    description: 'Test Vote',
-    result: 'Passed',
-    voteType: 'YEA-NAY',
-    bill: {
-      id: 'hr-1-119',
-      type: 'hr',
-      number: 1,
-      title: 'Test Bill',
-    },
+    result: 'passed',
+    yeas: 218,
+    nays: 212,
+    present: 1,
+    notVoting: 4,
   };
 
   beforeEach(() => {

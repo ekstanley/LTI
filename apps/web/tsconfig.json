@@ -8,6 +8,7 @@
       "@ltip/shared/validation": ["../../packages/shared/src/validation"],
       "@ltip/shared/*": ["../../packages/shared/src/*"]
     },
+    "types": ["vitest/globals"],
     "plugins": [{ "name": "next" }]
   },
   "include": [
