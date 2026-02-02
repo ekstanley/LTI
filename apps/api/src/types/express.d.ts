@@ -5,8 +5,6 @@
  * This provides type safety for auth and CSRF middleware consumers.
  */
 
-import type { User } from '@prisma/client';
-
 /**
  * Authenticated user attached to request by auth middleware.
  * Excludes sensitive fields like passwordHash.

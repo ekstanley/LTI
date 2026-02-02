@@ -1,5 +1,6 @@
+import { NextRequest } from 'next/server';
 import { describe, it, expect } from 'vitest';
-import { NextRequest, NextResponse } from 'next/server';
+
 import { middleware } from '@/middleware';
 
 describe('Security Headers', () => {

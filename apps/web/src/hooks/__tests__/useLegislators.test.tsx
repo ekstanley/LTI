@@ -7,13 +7,16 @@
  * - Cache key stability (3 param combinations)
  * - Error handling (4 error types)
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { SWRConfig } from 'swr';
-import { useLegislators, useLegislator } from '../useLegislators';
-import * as api from '@/lib/api';
 import type { Legislator, PaginatedResponse } from '@ltip/shared';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { SWRConfig } from 'swr';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import * as api from '@/lib/api';
+
+import { useLegislators, useLegislator } from '../useLegislators';
+
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({
@@ -51,21 +54,23 @@ describe('useLegislators', () => {
     data: [
       {
         id: 'S000033',
+        bioguideId: 'S000033',
         firstName: 'Bernie',
         lastName: 'Sanders',
+        fullName: 'Bernard Sanders',
         party: 'I',
         state: 'VT',
         chamber: 'senate',
-        district: null,
         imageUrl: 'https://example.com/sanders.jpg',
-        title: 'Senator',
+        inOffice: true,
+        termStart: '2019-01-03',
       },
     ],
     pagination: {
-      currentPage: 1,
-      totalPages: 1,
-      totalItems: 1,
-      itemsPerPage: 20,
+      total: 1,
+      limit: 20,
+      offset: 0,
+      hasMore: false,
     },
   };
 
@@ -262,8 +267,8 @@ describe('useLegislators', () => {
       vi.mocked(api.getLegislators).mockResolvedValue(mockLegislatorsResponse);
 
       const { result, rerender } = renderHook(
-        ({ enabled }) => useLegislators({ limit: 20, enabled }, { wrapper: createWrapper() }),
-        { initialProps: { enabled: false } }
+        ({ enabled }) => useLegislators({ limit: 20, enabled }),
+        { initialProps: { enabled: false }, wrapper: createWrapper() }
       );
 
       expect(api.getLegislators).not.toHaveBeenCalled();
@@ -336,14 +341,16 @@ describe('useLegislators', () => {
 describe('useLegislator', () => {
   const mockLegislator: Legislator = {
     id: 'S000033',
+    bioguideId: 'S000033',
     firstName: 'Bernie',
     lastName: 'Sanders',
+    fullName: 'Bernard Sanders',
     party: 'I',
     state: 'VT',
     chamber: 'senate',
-    district: null,
     imageUrl: 'https://example.com/sanders.jpg',
-    title: 'Senator',
+    inOffice: true,
+    termStart: '2019-01-03',
   };
 
   beforeEach(() => {

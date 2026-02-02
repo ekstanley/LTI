@@ -1,24 +1,26 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import cookieParser from 'cookie-parser';
-import { pinoHttp } from 'pino-http';
 import { createServer } from 'http';
 
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import express from 'express';
+import helmet from 'helmet';
+import { pinoHttp } from 'pino-http';
+
+
 import { config } from './config.js';
+import { initializeCache, disconnectCache, getCacheType } from './db/redis.js';
 import { logger } from './lib/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
-import { healthRouter } from './routes/health.js';
+import { analysisRouter } from './routes/analysis.js';
+import { authRouter } from './routes/auth.js';
 import { billsRouter } from './routes/bills.js';
+import { committeesRouter } from './routes/committees.js';
+import { conflictsRouter } from './routes/conflicts.js';
+import { healthRouter } from './routes/health.js';
 import { legislatorsRouter } from './routes/legislators.js';
 import { votesRouter } from './routes/votes.js';
-import { analysisRouter } from './routes/analysis.js';
-import { conflictsRouter } from './routes/conflicts.js';
-import { committeesRouter } from './routes/committees.js';
-import { authRouter } from './routes/auth.js';
 import { setupWebSocket } from './websocket/index.js';
-import { initializeCache, disconnectCache, getCacheType } from './db/redis.js';
 
 const app = express();
 

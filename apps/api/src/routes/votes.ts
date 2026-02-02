@@ -1,8 +1,9 @@
 import { Router, type Router as RouterType } from 'express';
-import { validate } from '../middleware/validate.js';
+
 import { ApiError } from '../middleware/error.js';
-import { voteService } from '../services/index.js';
+import { validate } from '../middleware/validate.js';
 import { listVotesSchema, getVoteSchema, recentVotesChamberSchema, recentVotesQuerySchema, compareVotesSchema } from '../schemas/votes.schema.js';
+import { voteService } from '../services/index.js';
 
 export const votesRouter: RouterType = Router();
 

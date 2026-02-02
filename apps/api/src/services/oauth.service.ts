@@ -6,10 +6,12 @@
  */
 
 import { randomBytes, createHash } from 'crypto';
+
 import { config } from '../config.js';
 import { prisma } from '../db/client.js';
-import { jwtService, type TokenPair } from './jwt.service.js';
 import { logger } from '../lib/logger.js';
+
+import { jwtService, type TokenPair } from './jwt.service.js';
 
 // ============================================================================
 // Types

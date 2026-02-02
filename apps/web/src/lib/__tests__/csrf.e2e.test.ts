@@ -9,6 +9,7 @@
  * - Automatic recovery mechanisms
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import * as api from '../api';
 
 // Mock fetch globally
@@ -283,7 +284,7 @@ describe('CSRF E2E Tests', () => {
             'Content-Type': 'application/json',
             'X-CSRF-Token': token,
           },
-          body: method !== 'DELETE' ? JSON.stringify({ data: 'test' }) : undefined,
+          ...(method !== 'DELETE' && { body: JSON.stringify({ data: 'test' }) }),
         });
 
         expect(mockFetch).toHaveBeenLastCalledWith(

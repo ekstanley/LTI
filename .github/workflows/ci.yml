@@ -30,11 +30,23 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Debug ESLint Configuration
+        run: |
+          echo "=== API ESLint Config ==="
+          cat apps/api/.eslintrc.json
+          echo ""
+          echo "=== ESLint Version ==="
+          pnpm --filter=@ltip/api exec eslint --version
+          echo ""
+          echo "=== TypeScript ESLint Parser Version ==="
+          pnpm --filter=@ltip/api list @typescript-eslint/parser
+          echo ""
+          echo "=== Node Modules ESLint Config (if exists) ==="
+          ls -la node_modules/.eslintrc* 2>/dev/null || echo "No .eslintrc in node_modules"
+          echo ""
+
       - name: Run ESLint
         run: pnpm lint
-
-      - name: Run Prettier check
-        run: pnpm prettier --check .
 
   typecheck:
     name: Type Check

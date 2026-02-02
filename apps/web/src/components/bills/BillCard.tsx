@@ -1,15 +1,14 @@
-import Link from 'next/link';
 import type { Bill } from '@ltip/shared';
 import {
   formatBillId,
   createBillSlug,
   formatDate,
   formatRelativeTime,
-} from '@ltip/shared';
-import { BILL_STATUS_LABELS, PARTY_LABELS } from '@ltip/shared';
-import { Badge } from '@/components/ui';
-import { Card, CardContent } from '@/components/ui';
+ BILL_STATUS_LABELS, PARTY_LABELS } from '@ltip/shared';
 import { ArrowRight, Users } from 'lucide-react';
+import Link from 'next/link';
+
+import { Badge , Card, CardContent } from '@/components/ui';
 
 interface BillCardProps {
   bill: Bill;

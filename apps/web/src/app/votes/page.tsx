@@ -4,6 +4,7 @@
  */
 
 import type { Metadata } from 'next';
+
 import { VotesPageClient } from './VotesPageClient';
 
 export const metadata: Metadata = {

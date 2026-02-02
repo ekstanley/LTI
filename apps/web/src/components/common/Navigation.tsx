@@ -5,11 +5,12 @@
 
 'use client';
 
+import { Menu, X, FileText, Users, Vote, type LucideIcon } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { cn } from '@/lib/utils';
-import { Menu, X, FileText, Users, Vote, type LucideIcon } from 'lucide-react';
 import { useState } from 'react';
+
+import { cn } from '@/lib/utils';
 
 interface NavLink {
   href: string;

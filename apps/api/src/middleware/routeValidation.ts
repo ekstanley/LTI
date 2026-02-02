@@ -17,12 +17,12 @@
  * @module api/middleware/routeValidation
  */
 
-import type { Request, Response, NextFunction } from 'express';
 import {
   validateBillId,
   validateLegislatorId,
   type ValidationResult,
 } from '@ltip/shared/validation';
+import type { Request, Response, NextFunction } from 'express';
 
 /**
  * Express middleware to validate bill ID route parameters

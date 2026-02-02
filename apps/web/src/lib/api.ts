@@ -10,6 +10,7 @@ import type {
   ConflictOfInterest,
   PaginatedResponse,
 } from '@ltip/shared';
+
 import { apiConfig } from '@/config/env';
 
 const API_BASE_URL = apiConfig.baseUrl;
@@ -51,7 +52,7 @@ export async function fetchCsrfToken(signal?: AbortSignal): Promise<string> {
     throw new Error('Failed to fetch CSRF token');
   }
 
-  const data = await response.json();
+  const data = await response.json() as { csrfToken?: unknown };
   if (!data.csrfToken || typeof data.csrfToken !== 'string') {
     throw new Error('Invalid CSRF token response');
   }
@@ -335,6 +336,7 @@ function validateStringParam(
   }
 
   // Check for control characters (potential injection)
+  // eslint-disable-next-line no-control-regex
   if (/[\x00-\x1F\x7F]/.test(trimmed)) {
     throw new ValidationError(
       `${fieldName} contains invalid control characters`,
@@ -688,7 +690,7 @@ async function fetcherCore<T>(
     }
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
+      const error = await response.json().catch(() => ({})) as { code?: string };
       throw new ApiError(
         response.status,
         error.code ?? 'UNKNOWN_ERROR',
@@ -696,7 +698,7 @@ async function fetcherCore<T>(
       );
     }
 
-    return response.json();
+    return response.json() as Promise<T>;
   } catch (error) {
     // Categorize error types for better handling
     if (error instanceof ApiError) {

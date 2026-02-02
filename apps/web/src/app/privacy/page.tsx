@@ -4,6 +4,7 @@
  */
 
 import type { Metadata } from 'next';
+
 import { Navigation } from '@/components/common';
 
 export const metadata: Metadata = {

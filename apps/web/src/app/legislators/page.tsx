@@ -4,6 +4,7 @@
  */
 
 import type { Metadata } from 'next';
+
 import { LegislatorsPageClient } from './LegislatorsPageClient';
 
 export const metadata: Metadata = {

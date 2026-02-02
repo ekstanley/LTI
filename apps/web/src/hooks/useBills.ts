@@ -3,11 +3,12 @@
  * @module hooks/useBills
  */
 
-import useSWR from 'swr';
 import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
+import useSWR from 'swr';
+
+import { swrConfig } from '@/config/env';
 import { getBills, getBill, type BillsQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
-import { swrConfig } from '@/config/env';
 
 export interface UseBillsOptions extends BillsQueryParams {
   /** Enable/disable fetching */
@@ -20,7 +21,7 @@ export interface UseBillsResult {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | null;
-  mutate: () => void;
+  mutate: () => Promise<PaginatedResponse<Bill> | undefined>;
 }
 
 /**

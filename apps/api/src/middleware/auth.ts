@@ -6,11 +6,14 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { jwtService } from '../services/jwt.service.js';
+
 import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
-import { ApiError } from './error.js';
+import { jwtService } from '../services/jwt.service.js';
 import type { AuthenticatedUser } from '../types/express.js';
+
+import { ApiError } from './error.js';
+
 
 /**
  * Extract Bearer token from Authorization header

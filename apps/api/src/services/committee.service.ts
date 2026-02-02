@@ -9,13 +9,14 @@
  */
 
 import type { PaginatedResponse } from '@ltip/shared';
+import type { Chamber, CommitteeType } from '@prisma/client';
+
+import { chamberToApi, apiToChamber, partyToApi, billTypeToApi, billStatusToApi } from '../mappers/index.js';
 import {
   committeeRepository,
   type CommitteeFilters,
   type PaginationParams,
 } from '../repositories/index.js';
-import { chamberToApi, apiToChamber, partyToApi, billTypeToApi, billStatusToApi } from '../mappers/index.js';
-import type { Chamber, CommitteeType } from '@prisma/client';
 
 /**
  * Parameters for listing committees

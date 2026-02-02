@@ -7,13 +7,16 @@
  * - Cache key stability (3 param combinations)
  * - Error handling (4 error types)
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor, act } from '@testing-library/react';
-import { SWRConfig } from 'swr';
-import { useBills, useBill } from '../useBills';
-import * as api from '@/lib/api';
 import type { Bill, PaginatedResponse } from '@ltip/shared';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { SWRConfig } from 'swr';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+import * as api from '@/lib/api';
+
+import { useBills, useBill } from '../useBills';
+
 
 // Mock the API module
 vi.mock('@/lib/api', () => ({
@@ -56,23 +59,35 @@ describe('useBills', () => {
         billNumber: 1,
         title: 'Test Bill 1',
         introducedDate: '2025-01-01',
-        lastAction: 'Introduced',
-        lastActionDate: '2025-01-01',
+        latestAction: {
+          date: '2025-01-01',
+          text: 'Introduced',
+        },
         status: 'introduced',
+        chamber: 'house',
         sponsor: {
           id: 'M001234',
+          bioguideId: 'S000001',
           firstName: 'John',
           lastName: 'Smith',
+          fullName: 'John Smith',
           party: 'D',
           state: 'CA',
+          chamber: 'house',
+          inOffice: true,
+          termStart: '2023-01-03',
         },
+        cosponsorsCount: 0,
+        subjects: [],
+        createdAt: '2025-01-01T00:00:00Z',
+        updatedAt: '2025-01-01T00:00:00Z',
       },
     ],
     pagination: {
-      currentPage: 1,
-      totalPages: 1,
-      totalItems: 1,
-      itemsPerPage: 20,
+      total: 1,
+      limit: 20,
+      offset: 0,
+      hasMore: false,
     },
   };
 
@@ -113,7 +128,7 @@ describe('useBills', () => {
       });
 
       expect(result.current.bills).toHaveLength(1);
-      expect(result.current.bills[0].title).toBe('Test Bill 1');
+      expect(result.current.bills[0]?.title).toBe('Test Bill 1');
       expect(result.current.error).toBeNull();
     });
 
@@ -266,8 +281,8 @@ describe('useBills', () => {
       vi.mocked(api.getBills).mockResolvedValue(mockBillsResponse);
 
       const { result, rerender } = renderHook(
-        ({ enabled }) => useBills({ limit: 20, enabled }, { wrapper: createWrapper() }),
-        { initialProps: { enabled: false } }
+        ({ enabled }) => useBills({ limit: 20, enabled }),
+        { initialProps: { enabled: false }, wrapper: createWrapper() }
       );
 
       expect(api.getBills).not.toHaveBeenCalled();
@@ -345,16 +360,28 @@ describe('useBill', () => {
     billNumber: 1,
     title: 'Test Bill',
     introducedDate: '2025-01-01',
-    lastAction: 'Introduced',
-    lastActionDate: '2025-01-01',
+    latestAction: {
+      date: '2025-01-01',
+      text: 'Introduced',
+    },
     status: 'introduced',
+    chamber: 'house',
     sponsor: {
       id: 'M001234',
+      bioguideId: 'S000001',
       firstName: 'John',
       lastName: 'Smith',
+      fullName: 'John Smith',
       party: 'D',
       state: 'CA',
+      chamber: 'house',
+      inOffice: true,
+      termStart: '2023-01-03',
     },
+    cosponsorsCount: 0,
+    subjects: [],
+    createdAt: '2025-01-01T00:00:00Z',
+    updatedAt: '2025-01-01T00:00:00Z',
   };
 
   beforeEach(() => {

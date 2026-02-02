@@ -7,7 +7,6 @@
  * Note: Party enum is identical in both (D, R, I, L, G) - no mapping needed.
  */
 
-import { BillType, Chamber, BillStatus, VotePosition, VoteResult, Party } from '@prisma/client';
 import type {
   BillType as ApiBillType,
   Chamber as ApiChamber,
@@ -16,6 +15,7 @@ import type {
   VoteResult as ApiVoteResult,
   Party as ApiParty,
 } from '@ltip/shared';
+import { BillType, Chamber, BillStatus, VotePosition, VoteResult, Party } from '@prisma/client';
 
 // ============================================================================
 // Bill Type Mappings

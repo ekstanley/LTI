@@ -5,19 +5,21 @@
 
 'use client';
 
-import { useState, useMemo, useCallback } from 'react';
-import Link from 'next/link';
-import { Search, X, Building2, MapPin } from 'lucide-react';
-import { useLegislators, useDebounce } from '@/hooks';
-import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
-import type { LegislatorsQueryParams } from '@/lib/api';
 import {
   PARTY_LABELS,
   PARTY_COLORS,
   CHAMBER_SHORT_LABELS,
   US_STATES,
 } from '@ltip/shared';
-import type { Legislator, Party, Chamber } from '@ltip/shared';
+import type { Legislator } from '@ltip/shared';
+import { Search, X, Building2, MapPin } from 'lucide-react';
+import Link from 'next/link';
+import { useState, useMemo, useCallback } from 'react';
+
+import { Navigation, LoadingState, EmptyState, Pagination, ErrorFallback } from '@/components/common';
+import { useLegislators, useDebounce } from '@/hooks';
+import type { LegislatorsQueryParams } from '@/lib/api';
+
 
 const PAGE_SIZE = 24;
 
@@ -35,9 +37,9 @@ interface Filters {
  * Legislator card component
  */
 function LegislatorCard({ legislator }: { legislator: Legislator }) {
-  const partyColor = PARTY_COLORS[legislator.party as Party] ?? 'bg-gray-600';
-  const partyLabel = PARTY_LABELS[legislator.party as Party] ?? legislator.party;
-  const chamberLabel = CHAMBER_SHORT_LABELS[legislator.chamber as Chamber] ?? legislator.chamber;
+  const partyColor = PARTY_COLORS[legislator.party] ?? 'bg-gray-600';
+  const partyLabel = PARTY_LABELS[legislator.party] ?? legislator.party;
+  const chamberLabel = CHAMBER_SHORT_LABELS[legislator.chamber] ?? legislator.chamber;
   const stateName = US_STATES[legislator.state as keyof typeof US_STATES] ?? legislator.state;
 
   return (
@@ -262,7 +264,7 @@ export function LegislatorsPageClient() {
             <ErrorFallback
               error={error}
               title="Failed to load legislators"
-              onRetry={() => mutate()}
+              onRetry={() => void mutate()}
             />
           )}
 

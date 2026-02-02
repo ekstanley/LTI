@@ -5,8 +5,10 @@
  * Implements secure token rotation with theft detection via family-based invalidation.
  */
 
-import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
 import { createHash, randomBytes } from 'crypto';
+
+import jwt, { type SignOptions, type JwtPayload } from 'jsonwebtoken';
+
 import { config } from '../config.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
@@ -210,7 +212,7 @@ export const jwtService = {
       return {
         valid: true,
         payload: {
-          sub: decoded.sub as string,
+          sub: decoded.sub,
           email: decoded.email,
           type: 'access',
         },

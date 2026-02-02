@@ -4,8 +4,9 @@
  * @module components/__tests__/VoteFilters.test
  */
 
-import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi } from 'vitest';
+
 import { VoteFilters } from '../VoteFilters';
 import type { VoteFilters as VoteFiltersType } from '../VoteFilters';
 

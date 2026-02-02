@@ -1,8 +1,9 @@
 import { Router, type Router as RouterType } from 'express';
-import { validate } from '../middleware/validate.js';
+
 import { ApiError } from '../middleware/error.js';
-import { committeeService } from '../services/index.js';
+import { validate } from '../middleware/validate.js';
 import { listCommitteesSchema, standingCommitteesSchema, getCommitteeSchema, committeeMembersSchema, committeeReferralsSchema } from '../schemas/committees.schema.js';
+import { committeeService } from '../services/index.js';
 
 export const committeesRouter: RouterType = Router();
 

@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
 import { trackWebVitals, checkPerformanceBudget, type PerformanceMetric } from '../performance';
 
 describe('Performance Tracking', () => {
@@ -14,12 +15,12 @@ describe('Performance Tracking', () => {
   afterEach(() => {
     consoleLogSpy.mockRestore();
     consoleWarnSpy.mockRestore();
-    process.env.NODE_ENV = originalEnv;
+    (process.env as { NODE_ENV?: string }).NODE_ENV = originalEnv;
   });
 
   describe('trackWebVitals', () => {
     it('should log metrics in development mode', () => {
-      process.env.NODE_ENV = 'development';
+      (process.env as { NODE_ENV?: string }).NODE_ENV = 'development';
 
       const metric: PerformanceMetric = {
         name: 'LCP',
@@ -37,7 +38,7 @@ describe('Performance Tracking', () => {
     });
 
     it('should not log metrics in production mode', () => {
-      process.env.NODE_ENV = 'production';
+      (process.env as { NODE_ENV?: string }).NODE_ENV = 'production';
 
       const metric: PerformanceMetric = {
         name: 'FID',
@@ -53,7 +54,7 @@ describe('Performance Tracking', () => {
     });
 
     it('should handle CLS metric without ms unit', () => {
-      process.env.NODE_ENV = 'development';
+      (process.env as { NODE_ENV?: string }).NODE_ENV = 'development';
 
       const metric: PerformanceMetric = {
         name: 'CLS',
@@ -74,7 +75,7 @@ describe('Performance Tracking', () => {
     });
 
     it('should track all Core Web Vitals metrics', () => {
-      process.env.NODE_ENV = 'development';
+      (process.env as { NODE_ENV?: string }).NODE_ENV = 'development';
 
       const metrics: PerformanceMetric[] = [
         { name: 'LCP', value: 2000, rating: 'good', delta: 2000, id: 'v1-1' },

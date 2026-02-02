@@ -6,11 +6,7 @@
  */
 
 import type { Vote, PaginatedResponse } from '@ltip/shared';
-import {
-  voteRepository,
-  type RollCallVoteFilters,
-  type PaginationParams,
-} from '../repositories/index.js';
+
 import {
   mapRollCallVoteSummaryToApi,
   mapRollCallVoteToApi,
@@ -19,6 +15,11 @@ import {
   apiToVoteResult,
   votePositionToApi,
 } from '../mappers/index.js';
+import {
+  voteRepository,
+  type RollCallVoteFilters,
+  type PaginationParams,
+} from '../repositories/index.js';
 
 /**
  * Parameters for listing votes

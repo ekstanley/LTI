@@ -5,12 +5,15 @@
  * Clients subscribe to topics like `bill:{billId}` to receive targeted updates.
  */
 
+import type { Server , IncomingMessage } from 'http';
+
+import type { WebSocketEvent } from '@ltip/shared';
 import { WebSocketServer, WebSocket } from 'ws';
-import type { Server } from 'http';
-import type { IncomingMessage } from 'http';
+
 import { logger } from '../lib/logger.js';
-import { roomManager } from './room-manager.js';
+
 import { authenticateWebSocketRequest, requiresAuthentication } from './auth.js';
+import { roomManager } from './room-manager.js';
 import type {
   ExtendedWebSocket,
   ClientMessage,
@@ -18,7 +21,7 @@ import type {
   WsErrorCode,
 } from './types.js';
 import { WS_ERROR_CODES } from './types.js';
-import type { WebSocketEvent } from '@ltip/shared';
+
 
 // ============================================================================
 // Configuration
@@ -191,7 +194,16 @@ function handleConnection(ws: WebSocket, req: IncomingMessage): void {
 
 function handleMessage(ws: ExtendedWebSocket, data: Buffer | ArrayBuffer | Buffer[]): void {
   try {
-    const message = JSON.parse(data.toString()) as ClientMessage;
+    // Convert data to string for JSON parsing
+    let dataStr: string;
+    if (Buffer.isBuffer(data)) {
+      dataStr = data.toString();
+    } else if (Array.isArray(data)) {
+      dataStr = Buffer.concat(data).toString();
+    } else {
+      dataStr = new TextDecoder().decode(data);
+    }
+    const message = JSON.parse(dataStr) as ClientMessage;
     logger.debug({ clientId: ws.clientId, type: message.type }, 'Message received');
 
     switch (message.type) {

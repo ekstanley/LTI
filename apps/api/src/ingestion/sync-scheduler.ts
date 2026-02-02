@@ -15,8 +15,10 @@
  */
 
 import type { PrismaClient } from '@prisma/client';
+
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
+
 import { CongressApiClient, getCongressClient } from './congress-client.js';
 import {
   transformBillListItem,
@@ -116,12 +118,14 @@ export class SyncScheduler {
     await this.runSync({ fetchDetails: false });
 
     // Schedule periodic syncs
-    this.intervalId = setInterval(async () => {
-      const syncOpts: SyncOptions = { fetchDetails: false };
-      if (this.state.lastSuccessfulSync) {
-        syncOpts.fromDate = this.state.lastSuccessfulSync;
-      }
-      await this.runSync(syncOpts);
+    this.intervalId = setInterval(() => {
+      void (async () => {
+        const syncOpts: SyncOptions = { fetchDetails: false };
+        if (this.state.lastSuccessfulSync) {
+          syncOpts.fromDate = this.state.lastSuccessfulSync;
+        }
+        await this.runSync(syncOpts);
+      })();
     }, config.congress.syncIntervalMs);
   }
 

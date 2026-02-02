@@ -6,9 +6,10 @@
  */
 
 import { prisma } from '../db/client.js';
+import { logger } from '../lib/logger.js';
+
 import { jwtService, type TokenPair } from './jwt.service.js';
 import { passwordService } from './password.service.js';
-import { logger } from '../lib/logger.js';
 
 /**
  * Registration input

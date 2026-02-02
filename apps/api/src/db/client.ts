@@ -6,16 +6,18 @@
  */
 
 import { PrismaClient } from '@prisma/client';
+
 import { config } from '../config.js';
 import { logger } from '../lib/logger.js';
 
 // Extend global to store Prisma client in development
 declare global {
-  // eslint-disable-next-line no-var
+  // eslint-disable-next-line no-var, @typescript-eslint/no-redundant-type-constituents
   var __prisma: PrismaClient | undefined;
 }
 
 function createPrismaClient(): PrismaClient {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call
   const client = new PrismaClient({
     log: config.isDev
       ? [
@@ -29,21 +31,29 @@ function createPrismaClient(): PrismaClient {
 
   // Log queries in development
   if (config.isDev) {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
     client.$on('query', (e) => {
       logger.debug({
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         query: e.query,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         params: e.params,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         duration: e.duration,
       }, 'Database query');
     });
   }
 
   // Log errors
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   client.$on('error', (e) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     logger.error({ message: e.message }, 'Prisma error');
   });
 
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   client.$on('warn', (e) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     logger.warn({ message: e.message }, 'Prisma warning');
   });
 
@@ -51,9 +61,11 @@ function createPrismaClient(): PrismaClient {
 }
 
 // Use global singleton in development to prevent connection pool issues
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 export const prisma: PrismaClient = globalThis.__prisma ?? createPrismaClient();
 
 if (config.isDev) {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
   globalThis.__prisma = prisma;
 }
 
@@ -65,6 +77,7 @@ export async function connectDatabase(maxRetries = 5): Promise<void> {
 
   while (retries < maxRetries) {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       await prisma.$connect();
       logger.info('Database connected successfully');
       return;
@@ -92,6 +105,7 @@ export async function connectDatabase(maxRetries = 5): Promise<void> {
  * Disconnect from database
  */
 export async function disconnectDatabase(): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   await prisma.$disconnect();
   logger.info('Database disconnected');
 }

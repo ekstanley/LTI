@@ -3,11 +3,12 @@
  * @module hooks/useVotes
  */
 
-import useSWR from 'swr';
 import type { Vote, PaginatedResponse, Pagination } from '@ltip/shared';
+import useSWR from 'swr';
+
+import { swrConfig } from '@/config/env';
 import { getVotes, getVote, type VotesQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
-import { swrConfig } from '@/config/env';
 
 export interface UseVotesOptions extends VotesQueryParams {
   /** Enable/disable fetching */
@@ -20,7 +21,7 @@ export interface UseVotesResult {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | null;
-  mutate: () => void;
+  mutate: () => Promise<PaginatedResponse<Vote> | undefined>;
 }
 
 /**

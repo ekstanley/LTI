@@ -8,6 +8,7 @@
  */
 
 import type { Request } from 'express';
+
 import type { AuthenticatedUser, SessionData } from '../types/express.js';
 
 /**

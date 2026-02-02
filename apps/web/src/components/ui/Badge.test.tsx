@@ -2,8 +2,9 @@
  * Tests for Badge component
  * @module components/ui/Badge.test
  */
-import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+
 import { Badge, type BadgeVariant } from './Badge';
 
 describe('Badge', () => {

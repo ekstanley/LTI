@@ -1,5 +1,6 @@
-import { config as loadEnv } from 'dotenv';
 import { resolve } from 'path';
+
+import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
 
 // Load environment variables from repository root (handles scripts running from different dirs)

@@ -6,6 +6,7 @@
  */
 
 import type { WebSocket } from 'ws';
+
 import { logger } from '../lib/logger.js';
 
 export class RoomManager {

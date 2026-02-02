@@ -3,11 +3,12 @@
  * @module hooks/useLegislators
  */
 
-import useSWR from 'swr';
 import type { Legislator, PaginatedResponse, Pagination } from '@ltip/shared';
+import useSWR from 'swr';
+
+import { swrConfig } from '@/config/env';
 import { getLegislators, getLegislator, type LegislatorsQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
-import { swrConfig } from '@/config/env';
 
 export interface UseLegislatorsOptions extends LegislatorsQueryParams {
   /** Enable/disable fetching */
@@ -20,7 +21,7 @@ export interface UseLegislatorsResult {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | null;
-  mutate: () => void;
+  mutate: () => Promise<PaginatedResponse<Legislator> | undefined>;
 }
 
 /**
