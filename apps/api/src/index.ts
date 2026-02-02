@@ -12,6 +12,7 @@ import { initializeCache, disconnectCache, getCacheType } from './db/redis.js';
 import { logger } from './lib/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
+import { adminRouter } from './routes/admin.js';
 import { analysisRouter } from './routes/analysis.js';
 import { authRouter } from './routes/auth.js';
 import { billsRouter } from './routes/bills.js';
@@ -99,6 +100,7 @@ app.use('/api/v1/analysis', analysisRouter);
 app.use('/api/v1/conflicts', conflictsRouter);
 app.use('/api/v1/committees', committeesRouter);
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/admin', adminRouter);
 
 // Error handling
 app.use(notFoundHandler);

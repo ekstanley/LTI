@@ -280,3 +280,52 @@ export interface RefreshTokenResponse {
   /** Updated user data */
   user: User;
 }
+
+// ============================================================================
+// Account Lockout Types
+// ============================================================================
+
+/**
+ * Account lockout information
+ */
+export interface AccountLockoutInfo {
+  /** Whether account is currently locked */
+  isLocked: boolean;
+  /** Remaining lockout duration in seconds (0 if not locked) */
+  remainingSeconds: number;
+  /** Current failure count */
+  attemptCount: number;
+  /** ISO timestamp when lockout expires (empty if not locked) */
+  lockoutExpiresAt: string;
+}
+
+/**
+ * Account lockout error response
+ */
+export interface AccountLockedError {
+  error: 'account_locked';
+  message: string;
+  /** Seconds until account is unlocked */
+  retryAfter: number;
+  /** ISO timestamp when lockout expires */
+  expiresAt: string;
+}
+
+/**
+ * Admin unlock request
+ */
+export interface AdminUnlockRequest {
+  /** Email of account to unlock */
+  email: string;
+}
+
+/**
+ * Admin unlock response
+ */
+export interface AdminUnlockResponse {
+  success: boolean;
+  /** Email that was unlocked */
+  email: string;
+  /** Whether any lockout data was actually cleared */
+  wasLocked: boolean;
+}

@@ -9,6 +9,7 @@ import { Router, type Router as RouterType, type Request } from 'express';
 
 import { config } from '../config.js';
 import { requireAuth } from '../middleware/auth.js';
+import { accountLockout, trackLoginAttempt } from '../middleware/accountLockout.js';
 import { authRateLimiter } from '../middleware/authRateLimiter.js';
 import { ApiError } from '../middleware/error.js';
 import { validate } from '../middleware/validate.js';
@@ -125,7 +126,7 @@ authRouter.post('/register', authRateLimiter, validate(registerSchema), async (r
  * @body {email, password}
  * @returns {user, accessToken, expiresAt}
  */
-authRouter.post('/login', authRateLimiter, validate(loginSchema), async (req, res, next) => {
+authRouter.post('/login', authRateLimiter, accountLockout, validate(loginSchema), async (req, res, next) => {
   try {
     const { email, password } = loginSchema.parse(req.body);
     const metadata = getClientMetadata(req);
@@ -135,6 +136,10 @@ authRouter.post('/login', authRateLimiter, validate(loginSchema), async (req, re
       password,
       ...metadata,
     });
+
+    // Track login attempt (success or failure)
+    const ip = metadata.ipAddress ?? 'unknown';
+    await trackLoginAttempt(email, ip, result.success);
 
     if (!result.success) {
       const errorMessages: Record<string, { status: number; message: string }> = {
