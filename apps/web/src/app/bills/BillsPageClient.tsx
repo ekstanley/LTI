@@ -106,7 +106,7 @@ export function BillsPageClient() {
             <ErrorFallback
               error={error}
               title="Failed to load bills"
-              onRetry={() => mutate()}
+              onRetry={() => void mutate()}
             />
           )}
 

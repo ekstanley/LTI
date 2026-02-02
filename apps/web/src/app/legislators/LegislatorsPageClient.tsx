@@ -264,7 +264,7 @@ export function LegislatorsPageClient() {
             <ErrorFallback
               error={error}
               title="Failed to load legislators"
-              onRetry={() => mutate()}
+              onRetry={() => void mutate()}
             />
           )}
 
