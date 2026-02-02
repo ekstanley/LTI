@@ -196,84 +196,99 @@ export function useRetryState(options: RetryOptions = {}) {
    */
   const trackRetry = useCallback(
     async <T,>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> => {
+      // Abort previous controller if it exists (prevents memory leak)
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
       // Create new AbortController for this request
       abortControllerRef.current = new AbortController();
 
-      // Link external signal if provided
+      // Link external signal if provided (with cleanup to prevent memory leak)
+      let externalAbortHandler: (() => void) | null = null;
       if (signal) {
-        signal.addEventListener('abort', () => {
+        externalAbortHandler = () => {
           abortControllerRef.current?.abort();
-        });
+        };
+        signal.addEventListener('abort', externalAbortHandler);
       }
 
       const internalSignal = abortControllerRef.current.signal;
 
       let lastAttemptError: Error | null = null;
 
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          // Check if aborted before attempt
-          if (internalSignal.aborted) {
-            const error = new Error('Request was cancelled');
-            error.name = 'AbortError';
-            throw error;
-          }
-
-          // First attempt: not retrying
-          // Subsequent attempts: retrying
-          if (attempt > 0) {
-            setIsRetrying(true);
-            setRetryCount(attempt);
-            onRetry?.(attempt, lastAttemptError!);
-          }
-
-          // Execute the function
-          const result = await fn();
-
-          // Success! Reset state
-          setRetryCount(0);
-          setIsRetrying(false);
-          setLastError(null);
-
-          return result;
-        } catch (error) {
-          lastAttemptError = error instanceof Error ? error : new Error(String(error));
-          setLastError(lastAttemptError);
-
-          // Don't retry if aborted
-          if (isAbortError(error)) {
-            setIsRetrying(false);
-            throw error;
-          }
-
-          // Check if error is retryable
-          if (!isRetryableError(error)) {
-            setIsRetrying(false);
-            throw error;
-          }
-
-          // Check if we have retries remaining
-          if (attempt >= maxRetries) {
-            setIsRetrying(false);
-            throw error;
-          }
-
-          // Wait with exponential backoff before retry
-          const backoffDelay = calculateBackoff(attempt, initialDelay);
-
+      // Use try-finally to ensure external listener cleanup
+      try {
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
           try {
-            await sleep(backoffDelay, internalSignal);
-          } catch (sleepError) {
-            // Sleep was aborted
+            // Check if aborted before attempt
+            if (internalSignal.aborted) {
+              const error = new Error('Request was cancelled');
+              error.name = 'AbortError';
+              throw error;
+            }
+
+            // First attempt: not retrying
+            // Subsequent attempts: retrying
+            if (attempt > 0) {
+              setIsRetrying(true);
+              setRetryCount(attempt);
+              onRetry?.(attempt, lastAttemptError!);
+            }
+
+            // Execute the function
+            const result = await fn();
+
+            // Success! Reset state
+            setRetryCount(0);
             setIsRetrying(false);
-            throw sleepError;
+            setLastError(null);
+
+            return result;
+          } catch (error) {
+            lastAttemptError = error instanceof Error ? error : new Error(String(error));
+            setLastError(lastAttemptError);
+
+            // Don't retry if aborted
+            if (isAbortError(error)) {
+              setIsRetrying(false);
+              throw error;
+            }
+
+            // Check if error is retryable
+            if (!isRetryableError(error)) {
+              setIsRetrying(false);
+              throw error;
+            }
+
+            // Check if we have retries remaining
+            if (attempt >= maxRetries) {
+              setIsRetrying(false);
+              throw error;
+            }
+
+            // Wait with exponential backoff before retry
+            const backoffDelay = calculateBackoff(attempt, initialDelay);
+
+            try {
+              await sleep(backoffDelay, internalSignal);
+            } catch (sleepError) {
+              // Sleep was aborted
+              setIsRetrying(false);
+              throw sleepError;
+            }
           }
         }
-      }
 
-      // Should never reach here, but TypeScript needs this
-      setIsRetrying(false);
-      throw lastAttemptError!;
+        // Should never reach here, but TypeScript needs this
+        setIsRetrying(false);
+        throw lastAttemptError!;
+      } finally {
+        // Clean up external signal listener (prevents memory leak)
+        if (signal && externalAbortHandler) {
+          signal.removeEventListener('abort', externalAbortHandler);
+        }
+      }
     },
     [maxRetries, initialDelay, onRetry]
   );
