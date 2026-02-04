@@ -154,7 +154,7 @@ export {
   transformBillBatch,
   transformMemberBatch,
   transformCommitteeBatch,
-} from './data-transformer.js';
+} from './transformers/index.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sync Scheduler

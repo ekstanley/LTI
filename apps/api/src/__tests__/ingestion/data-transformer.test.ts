@@ -26,7 +26,7 @@ import {
   transformBillBatch,
   transformMemberBatch,
   transformCommitteeBatch,
-} from '../../ingestion/data-transformer.js';
+} from '../../ingestion/transformers/index.js';
 import type {
   BillListItem,
   BillDetail,

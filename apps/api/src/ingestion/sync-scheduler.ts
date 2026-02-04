@@ -33,7 +33,7 @@ import {
   type BillCreateInput,
   type LegislatorCreateInput,
   type CommitteeCreateInput,
-} from './data-transformer.js';
+} from './transformers/index.js';
 import type { SyncState, SyncResult, CongressBillType } from './types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
