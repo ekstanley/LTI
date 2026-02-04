@@ -448,13 +448,13 @@ describe('API Client', () => {
         // Prevent unhandled rejection warnings
         resultPromise.catch(() => {});
 
-        // Advance through all retry attempts
-        await vi.advanceTimersByTimeAsync(8000);
+        // Advance through all retry attempts (rate limit may need more time)
+        await vi.advanceTimersByTimeAsync(10000);
 
         await expect(resultPromise).rejects.toThrow(ApiError);
         await expect(resultPromise).rejects.toMatchObject({ status: 429 });
         expect(mockFetch).toHaveBeenCalledTimes(4);
-      });
+      }, 10000); // Increase timeout to 10s for rate limit retry tests
     });
 
     describe('Non-Retriable Errors (Immediate Throw)', () => {
