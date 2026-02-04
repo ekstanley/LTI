@@ -195,7 +195,7 @@ export function useRetryState(options: RetryOptions = {}) {
    * @returns Promise resolving to function result
    */
   const trackRetry = useCallback(
-    async <T,>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> => {
+    async <T>(fn: () => Promise<T>, signal?: AbortSignal): Promise<T> => {
       // Abort previous controller if it exists (prevents memory leak)
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
