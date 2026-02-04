@@ -53,7 +53,7 @@ k6 run analysis.js > analysis-baseline.txt
 
 ## Bills API Baselines
 
-### GET /api/bills (List Bills)
+### GET /api/v1/bills (List Bills)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -63,7 +63,7 @@ k6 run analysis.js > analysis-baseline.txt
 | Throughput | > 50 req/s | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/bills/:id (Single Bill)
+### GET /api/v1/bills/:id (Single Bill)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -73,7 +73,7 @@ k6 run analysis.js > analysis-baseline.txt
 | Throughput | > 100 req/s | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/bills/:id/sponsors
+### GET /api/v1/bills/:id/sponsors
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -82,7 +82,7 @@ k6 run analysis.js > analysis-baseline.txt
 | P99 latency | < 800ms | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/bills/:id/cosponsors
+### GET /api/v1/bills/:id/cosponsors
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -91,7 +91,7 @@ k6 run analysis.js > analysis-baseline.txt
 | P99 latency | < 800ms | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/bills/:id/actions
+### GET /api/v1/bills/:id/actions
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -100,7 +100,7 @@ k6 run analysis.js > analysis-baseline.txt
 | P99 latency | < 1000ms | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/bills/:id/text
+### GET /api/v1/bills/:id/text
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -109,7 +109,7 @@ k6 run analysis.js > analysis-baseline.txt
 | P99 latency | < 1000ms | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/bills/:id/related
+### GET /api/v1/bills/:id/related
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -122,7 +122,7 @@ k6 run analysis.js > analysis-baseline.txt
 
 ## Legislators API Baselines
 
-### GET /api/legislators (List Legislators)
+### GET /api/v1/legislators (List Legislators)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -132,7 +132,7 @@ k6 run analysis.js > analysis-baseline.txt
 | Throughput | > 50 req/s | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/legislators/:id (Single Legislator)
+### GET /api/v1/legislators/:id (Single Legislator)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -142,7 +142,7 @@ k6 run analysis.js > analysis-baseline.txt
 | Throughput | > 100 req/s | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/legislators/:id/committees
+### GET /api/v1/legislators/:id/committees
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -155,7 +155,7 @@ k6 run analysis.js > analysis-baseline.txt
 
 ## Votes API Baselines
 
-### GET /api/votes (List Votes)
+### GET /api/v1/votes (List Votes)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -165,7 +165,7 @@ k6 run analysis.js > analysis-baseline.txt
 | Throughput | > 40 req/s | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/votes/:id (Single Vote)
+### GET /api/v1/votes/:id (Single Vote)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -175,7 +175,7 @@ k6 run analysis.js > analysis-baseline.txt
 | Throughput | > 100 req/s | TBD | ⏳ Pending |
 | Error rate | < 1% | TBD | ⏳ Pending |
 
-### GET /api/votes/:id/breakdown
+### GET /api/v1/votes/:id/breakdown
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -191,7 +191,7 @@ k6 run analysis.js > analysis-baseline.txt
 **Note**: Conflicts API currently returns empty data (feature not implemented).
 Baselines will be established when feature is complete.
 
-### GET /api/conflicts (List Conflicts)
+### GET /api/v1/conflicts (List Conflicts)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -200,7 +200,7 @@ Baselines will be established when feature is complete.
 | P99 latency | < 1000ms | TBD | ⏳ Pending |
 | Error rate | 0% (200 OK) | TBD | ⏳ Pending |
 
-### GET /api/conflicts/:id (Single Conflict)
+### GET /api/v1/conflicts/:id (Single Conflict)
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -268,7 +268,7 @@ Higher latency thresholds are expected.
 **Note**: Analysis API currently returns 404/placeholder responses (feature not implemented).
 Baselines will be established when feature is complete.
 
-### GET /api/analysis/:billId
+### GET /api/v1/analysis/:billId
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|
@@ -277,7 +277,7 @@ Baselines will be established when feature is complete.
 | P99 latency | < 5000ms | TBD | ⏳ Pending |
 | Error rate | 100% (404) | TBD | ⏳ Pending |
 
-### POST /api/analysis/:billId/generate
+### POST /api/v1/analysis/:billId/generate
 
 | Metric | Target | Actual | Status |
 |--------|--------|--------|--------|

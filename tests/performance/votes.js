@@ -2,9 +2,9 @@
  * Votes API Load Test
  *
  * Tests the following endpoints:
- * - GET /api/votes - List votes with filtering
- * - GET /api/votes/:id - Single vote details
- * - GET /api/votes/:id/breakdown - Individual legislator votes
+ * - GET /api/v1/votes - List votes with filtering
+ * - GET /api/v1/votes/:id - Single vote details
+ * - GET /api/v1/votes/:id/breakdown - Individual legislator votes
  *
  * Load Profiles:
  * - light: 10 VUs for 1 minute
@@ -171,7 +171,7 @@ export default function () {
     group('List Votes', () => {
       const filters = getRandomFilters();
       const queryString = buildQueryString(filters);
-      const url = `${BASE_URL}/api/votes${queryString}`;
+      const url = `${BASE_URL}/api/v1/votes${queryString}`;
 
       const res = http.get(url);
       listVotesDuration.add(res.timings.duration);
@@ -183,7 +183,7 @@ export default function () {
   if (Math.random() < 0.3) {
     group('Get Vote Details', () => {
       const voteId = getRandomVoteId();
-      const url = `${BASE_URL}/api/votes/${voteId}`;
+      const url = `${BASE_URL}/api/v1/votes/${voteId}`;
 
       const res = http.get(url);
       getVoteDuration.add(res.timings.duration);
@@ -195,7 +195,7 @@ export default function () {
   if (Math.random() < 0.1) {
     group('Get Vote Breakdown', () => {
       const voteId = getRandomVoteId();
-      const url = `${BASE_URL}/api/votes/${voteId}/breakdown`;
+      const url = `${BASE_URL}/api/v1/votes/${voteId}/breakdown`;
 
       const res = http.get(url);
       getBreakdownDuration.add(res.timings.duration);

@@ -2,9 +2,9 @@
  * Legislators API Load Test
  *
  * Tests the following endpoints:
- * - GET /api/legislators - List legislators with filtering
- * - GET /api/legislators/:id - Single legislator details
- * - GET /api/legislators/:id/committees - Legislator committees
+ * - GET /api/v1/legislators - List legislators with filtering
+ * - GET /api/v1/legislators/:id - Single legislator details
+ * - GET /api/v1/legislators/:id/committees - Legislator committees
  *
  * Load Profiles:
  * - light: 10 VUs for 1 minute
@@ -171,7 +171,7 @@ export default function () {
     group('List Legislators', () => {
       const filters = getRandomFilters();
       const queryString = buildQueryString(filters);
-      const url = `${BASE_URL}/api/legislators${queryString}`;
+      const url = `${BASE_URL}/api/v1/legislators${queryString}`;
 
       const res = http.get(url);
       listLegislatorsDuration.add(res.timings.duration);
@@ -183,7 +183,7 @@ export default function () {
   if (Math.random() < 0.3) {
     group('Get Legislator Details', () => {
       const legislatorId = getRandomLegislatorId();
-      const url = `${BASE_URL}/api/legislators/${legislatorId}`;
+      const url = `${BASE_URL}/api/v1/legislators/${legislatorId}`;
 
       const res = http.get(url);
       getLegislatorDuration.add(res.timings.duration);
@@ -195,7 +195,7 @@ export default function () {
   if (Math.random() < 0.1) {
     group('Get Legislator Committees', () => {
       const legislatorId = getRandomLegislatorId();
-      const url = `${BASE_URL}/api/legislators/${legislatorId}/committees`;
+      const url = `${BASE_URL}/api/v1/legislators/${legislatorId}/committees`;
 
       const res = http.get(url);
       getCommitteesDuration.add(res.timings.duration);

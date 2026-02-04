@@ -2,8 +2,8 @@
  * Conflicts API Load Test
  *
  * Tests the following endpoints:
- * - GET /api/conflicts - List conflicts with filtering
- * - GET /api/conflicts/:id - Single conflict details
+ * - GET /api/v1/conflicts - List conflicts with filtering
+ * - GET /api/v1/conflicts/:id - Single conflict details
  *
  * NOTE: These endpoints currently return empty data (TODO in implementation).
  *       This script establishes baseline performance for when the feature is implemented.
@@ -188,7 +188,7 @@ export default function () {
     group('List Conflicts', () => {
       const filters = getRandomFilters();
       const queryString = buildQueryString(filters);
-      const url = `${BASE_URL}/api/conflicts${queryString}`;
+      const url = `${BASE_URL}/api/v1/conflicts${queryString}`;
 
       const res = http.get(url);
       listConflictsDuration.add(res.timings.duration);
@@ -201,7 +201,7 @@ export default function () {
   if (Math.random() < 0.3) {
     group('Get Conflict Details', () => {
       const conflictId = getRandomConflictId();
-      const url = `${BASE_URL}/api/conflicts/${conflictId}`;
+      const url = `${BASE_URL}/api/v1/conflicts/${conflictId}`;
 
       const res = http.get(url);
       getConflictDuration.add(res.timings.duration);

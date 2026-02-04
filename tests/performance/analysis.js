@@ -2,8 +2,8 @@
  * Analysis API Load Test
  *
  * Tests the following endpoints:
- * - GET /api/analysis/:billId - Get bill analysis
- * - POST /api/analysis/:billId/generate - Request new analysis
+ * - GET /api/v1/analysis/:billId - Get bill analysis
+ * - POST /api/v1/analysis/:billId/generate - Request new analysis
  *
  * NOTE: These endpoints currently return 404/placeholder responses (TODO in implementation).
  *       This script establishes baseline performance for when the feature is implemented.
@@ -167,7 +167,7 @@ export default function () {
   if (Math.random() < 0.7) {
     group('Get Analysis', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/analysis/${billId}`;
+      const url = `${BASE_URL}/api/v1/analysis/${billId}`;
 
       const res = http.get(url);
       getAnalysisDuration.add(res.timings.duration);
@@ -181,7 +181,7 @@ export default function () {
   if (Math.random() < 0.3) {
     group('Generate Analysis', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/analysis/${billId}/generate`;
+      const url = `${BASE_URL}/api/v1/analysis/${billId}/generate`;
 
       const res = http.post(url);
       generateAnalysisDuration.add(res.timings.duration);

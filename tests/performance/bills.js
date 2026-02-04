@@ -2,13 +2,13 @@
  * Bills API Load Test
  *
  * Tests the following endpoints:
- * - GET /api/bills - List bills with filtering
- * - GET /api/bills/:id - Single bill details
- * - GET /api/bills/:id/sponsors - Bill sponsors
- * - GET /api/bills/:id/cosponsors - Bill cosponsors
- * - GET /api/bills/:id/actions - Bill action history
- * - GET /api/bills/:id/text - Bill text versions
- * - GET /api/bills/:id/related - Related bills
+ * - GET /api/v1/bills - List bills with filtering
+ * - GET /api/v1/bills/:id - Single bill details
+ * - GET /api/v1/bills/:id/sponsors - Bill sponsors
+ * - GET /api/v1/bills/:id/cosponsors - Bill cosponsors
+ * - GET /api/v1/bills/:id/actions - Bill action history
+ * - GET /api/v1/bills/:id/text - Bill text versions
+ * - GET /api/v1/bills/:id/related - Related bills
  *
  * Load Profiles:
  * - light: 10 VUs for 1 minute
@@ -178,7 +178,7 @@ export default function () {
     group('List Bills', () => {
       const filters = getRandomFilters();
       const queryString = buildQueryString(filters);
-      const url = `${BASE_URL}/api/bills${queryString}`;
+      const url = `${BASE_URL}/api/v1/bills${queryString}`;
 
       const res = http.get(url);
       listBillsDuration.add(res.timings.duration);
@@ -190,7 +190,7 @@ export default function () {
   if (Math.random() < 0.3) {
     group('Get Bill Details', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/bills/${billId}`;
+      const url = `${BASE_URL}/api/v1/bills/${billId}`;
 
       const res = http.get(url);
       getBillDuration.add(res.timings.duration);
@@ -202,7 +202,7 @@ export default function () {
   if (Math.random() < 0.1) {
     group('Get Bill Sponsors', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/bills/${billId}/sponsors`;
+      const url = `${BASE_URL}/api/v1/bills/${billId}/sponsors`;
 
       const res = http.get(url);
       getSponsorsDuration.add(res.timings.duration);
@@ -214,7 +214,7 @@ export default function () {
   if (Math.random() < 0.1) {
     group('Get Bill Cosponsors', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/bills/${billId}/cosponsors`;
+      const url = `${BASE_URL}/api/v1/bills/${billId}/cosponsors`;
 
       const res = http.get(url);
       getCosponsorsDuration.add(res.timings.duration);
@@ -226,7 +226,7 @@ export default function () {
   if (Math.random() < 0.05) {
     group('Get Bill Actions', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/bills/${billId}/actions`;
+      const url = `${BASE_URL}/api/v1/bills/${billId}/actions`;
 
       const res = http.get(url);
       getActionsDuration.add(res.timings.duration);
@@ -238,7 +238,7 @@ export default function () {
   if (Math.random() < 0.03) {
     group('Get Bill Text', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/bills/${billId}/text`;
+      const url = `${BASE_URL}/api/v1/bills/${billId}/text`;
 
       const res = http.get(url);
       getTextDuration.add(res.timings.duration);
@@ -250,7 +250,7 @@ export default function () {
   if (Math.random() < 0.02) {
     group('Get Related Bills', () => {
       const billId = getRandomBillId();
-      const url = `${BASE_URL}/api/bills/${billId}/related?limit=5`;
+      const url = `${BASE_URL}/api/v1/bills/${billId}/related?limit=5`;
 
       const res = http.get(url);
       getRelatedDuration.add(res.timings.duration);

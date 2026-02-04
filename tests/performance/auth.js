@@ -94,19 +94,22 @@ const requestCounter = new Counter('total_requests');
 
 // ===== Test Data =====
 
-const VU_COUNT = __VU;
-const ITERATION = __ITER;
-
 /**
  * Generate unique test user credentials
+ *
+ * Uses __VU (virtual user ID) and __ITER (iteration count) from k6 execution
+ * context. These are only available inside the default function scope,
+ * so we read them at call time rather than at module init.
  */
 function generateTestUser() {
+  const vu = __VU;
+  const iter = __ITER;
   const timestamp = Date.now();
   const random = Math.floor(Math.random() * 10000);
   return {
-    email: `loadtest-${VU_COUNT}-${timestamp}-${random}@example.com`,
+    email: `loadtest-${vu}-${timestamp}-${random}@example.com`,
     password: `TestPassword123!${random}`,
-    name: `Load Test User ${VU_COUNT}-${ITERATION}`,
+    name: `Load Test User ${vu}-${iter}`,
   };
 }
 
