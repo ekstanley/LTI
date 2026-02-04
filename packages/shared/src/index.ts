@@ -8,10 +8,10 @@
  */
 
 // Re-export types
-export * from './types';
+export * from './types/index.js';
 
 // Re-export utilities
-export * from './utils';
+export * from './utils/index.js';
 
 // Re-export constants
-export * from './constants';
+export * from './constants/index.js';

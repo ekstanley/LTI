@@ -4,6 +4,16 @@ const nextConfig = {
   experimental: {
     typedRoutes: true,
   },
+  webpack: (config) => {
+    // Fix ESM .js extension resolution for transpiled TypeScript packages.
+    // When transpilePackages processes @ltip/shared source directly, webpack
+    // needs to resolve .js imports to their .ts source files.
+    config.resolve.extensionAlias = {
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+      '.mjs': ['.mts', '.mjs'],
+    };
+    return config;
+  },
   images: {
     remotePatterns: [
       {

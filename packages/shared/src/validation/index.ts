@@ -19,8 +19,8 @@
 // Types
 // ============================================================================
 
-export { ValidationErrorCode } from './types';
-export type { ValidationResult, ValidationContext } from './types';
+export { ValidationErrorCode } from './types.js';
+export type { ValidationResult, ValidationContext } from './types.js';
 
 // ============================================================================
 // Bill Validation
@@ -31,7 +31,7 @@ export {
   validateBillId,
   BILL_ID_MAX_LENGTH,
   BILL_ID_PATTERN,
-} from './bills';
+} from './bills.js';
 
 // ============================================================================
 // Legislator Validation
@@ -42,7 +42,7 @@ export {
   validateLegislatorId,
   LEGISLATOR_ID_MAX_LENGTH,
   LEGISLATOR_ID_PATTERN,
-} from './legislators';
+} from './legislators.js';
 
 // ============================================================================
 // Filter Validation (Zod Schemas)
@@ -58,10 +58,10 @@ export {
   voteResults,
   legislatorChambers,
   parties,
-} from './filters';
+} from './filters.js';
 
 export type {
   BillFilterInput,
   VoteFilterInput,
   LegislatorFilterInput,
-} from './filters';
+} from './filters.js';

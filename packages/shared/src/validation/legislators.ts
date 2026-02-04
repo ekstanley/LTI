@@ -9,8 +9,8 @@
  * @module @ltip/shared/validation/legislators
  */
 
-import type { ValidationResult } from './types';
-import { ValidationErrorCode } from './types';
+import type { ValidationResult } from './types.js';
+import { ValidationErrorCode } from './types.js';
 
 /**
  * Maximum allowed length for legislator IDs
