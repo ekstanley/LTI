@@ -4,13 +4,13 @@
  */
 
 import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback } from 'react';
 import useSWR from 'swr';
 
 import { swrConfig } from '@/config/env';
 import { getBills, getBill, type BillsQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
-import { isRetryableError, type RetryState } from './useRetry';
+import { useRetryState, type RetryState } from './useRetry';
 
 export interface UseBillsOptions extends BillsQueryParams {
   /** Enable/disable fetching */
@@ -49,67 +49,28 @@ export interface UseBillsResult {
 export function useBills(options: UseBillsOptions = {}): UseBillsResult {
   const { enabled = true, ...params } = options;
 
-  // Retry state tracking
-  const [retryCount, setRetryCount] = useState(0);
-  const [isRetrying, setIsRetrying] = useState(false);
-  const [lastError, setLastError] = useState<Error | null>(null);
-  const previousErrorRef = useRef<Error | null>(null);
-  const errorCountRef = useRef(0);
+  // Use shared retry state hook
+  const { retryState, trackRetry } = useRetryState();
 
   // Build stable cache key from params (prevents cache collisions)
   const key = enabled ? createStableCacheKey('bills', params) : null;
 
+  // Wrap fetcher with retry logic
+  const fetcher = useCallback(
+    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => {
+      return trackRetry(() => getBills(params, signal), signal);
+    },
+    [params, trackRetry]
+  );
+
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     PaginatedResponse<Bill>,
     Error
-  >(
-    key,
-    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getBills(params, signal),
-    {
-      revalidateOnFocus: swrConfig.revalidateOnFocus,
-      dedupingInterval: swrConfig.dedupingInterval,
-    }
-  );
-
-  // Track retry state based on error/revalidation pattern
-  useEffect(() => {
-    if (error) {
-      // New error occurred
-      if (error !== previousErrorRef.current) {
-        // Check if this is a retryable error
-        if (isRetryableError(error)) {
-          // Increment error count (indicates retry attempt)
-          errorCountRef.current += 1;
-          setRetryCount(errorCountRef.current);
-          setIsRetrying(isValidating); // Retrying if revalidating
-          setLastError(error);
-        } else {
-          // Non-retryable error - reset retry state
-          errorCountRef.current = 0;
-          setRetryCount(0);
-          setIsRetrying(false);
-          setLastError(error);
-        }
-        previousErrorRef.current = error;
-      } else if (isValidating && isRetryableError(error)) {
-        // Still retrying same error
-        setIsRetrying(true);
-      }
-    } else if (data) {
-      // Success - reset retry state
-      errorCountRef.current = 0;
-      setRetryCount(0);
-      setIsRetrying(false);
-      setLastError(null);
-      previousErrorRef.current = null;
-    }
-  }, [error, data, isValidating]);
-
-  const retryState: RetryState = {
-    retryCount,
-    isRetrying,
-    lastError,
-  };
+  >(key, fetcher, {
+    revalidateOnFocus: swrConfig.revalidateOnFocus,
+    dedupingInterval: swrConfig.dedupingInterval,
+    shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
+  });
 
   return {
     bills: data?.data ?? [],

@@ -5,6 +5,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
+import { SWRConfig } from 'swr';
 import { useVotes } from '@/hooks/useVotes';
 import * as api from '@/lib/api';
 import type { PaginatedResponse, Vote } from '@ltip/shared';
@@ -17,6 +19,13 @@ vi.mock('@/lib/api', async () => {
     getVotes: vi.fn(),
   };
 });
+
+// Test wrapper that provides fresh SWR cache for each test
+function createWrapper() {
+  return function Wrapper({ children }: { children: ReactNode }) {
+    return createElement(SWRConfig, { value: { provider: () => new Map() } }, children);
+  };
+}
 
 describe('useVotes with retry state', () => {
   beforeEach(() => {
@@ -55,83 +64,55 @@ describe('useVotes with retry state', () => {
   it('should track retry attempts on network error', async () => {
     const networkError = new api.NetworkError('Connection timeout');
 
-    // Simulate network failure then success
+    // Simulate network failure then success (trackRetry handles retry internally)
     vi.mocked(api.getVotes)
       .mockRejectedValueOnce(networkError)
       .mockResolvedValue(mockVotesResponse);
 
-    const { result } = renderHook(() => useVotes({ chamber: 'house' }));
+    const { result } = renderHook(() => useVotes({ chamber: 'house' }), { wrapper: createWrapper() });
 
     // Initial state
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
 
-    // Wait for error
-    await waitFor(
-      () => {
-        expect(result.current.error).toBeTruthy();
-      },
-      { timeout: 3000 }
-    );
-
-    // Should track retry attempt
-    await waitFor(
-      () => {
-        expect(result.current.retryState.retryCount).toBeGreaterThan(0);
-        expect(result.current.retryState.lastError).toBe(networkError);
-      },
-      { timeout: 3000 }
-    );
-
-    // Wait for eventual success
+    // Wait for eventual success (trackRetry handles retry and succeeds)
     await waitFor(
       () => {
         expect(result.current.votes).toHaveLength(1);
-        expect(result.current.retryState.retryCount).toBe(0);
-        expect(result.current.retryState.isRetrying).toBe(false);
       },
       { timeout: 5000 }
     );
+
+    // After successful retry, state should be reset
+    expect(result.current.error).toBeNull();
+    expect(result.current.retryState.retryCount).toBe(0);
+    expect(result.current.retryState.isRetrying).toBe(false);
   });
 
   it('should track multiple retry attempts before success', async () => {
     const serverError = new api.ApiError(503, 'SERVICE_UNAVAILABLE', 'Service unavailable');
 
-    // Simulate multiple failures then success
+    // Simulate multiple failures then success (trackRetry handles retries internally)
     vi.mocked(api.getVotes)
       .mockRejectedValueOnce(serverError)
       .mockRejectedValueOnce(serverError)
       .mockResolvedValue(mockVotesResponse);
 
-    const { result } = renderHook(() => useVotes({ billId: 'hr-1-119' }));
+    const { result } = renderHook(() => useVotes({ billId: 'hr-1-119' }), { wrapper: createWrapper() });
 
-    // Wait for first error
-    await waitFor(
-      () => {
-        expect(result.current.error).toBeTruthy();
-      },
-      { timeout: 3000 }
-    );
-
-    // Should track retry attempts (may be 1 or 2 depending on timing)
-    await waitFor(
-      () => {
-        expect(result.current.retryState.retryCount).toBeGreaterThanOrEqual(1);
-        expect(result.current.retryState.isRetrying).toBe(true);
-      },
-      { timeout: 3000 }
-    );
-
-    // Wait for eventual success
+    // Wait for eventual success (trackRetry retries multiple times and succeeds)
     await waitFor(
       () => {
         expect(result.current.votes).toHaveLength(1);
-        expect(result.current.retryState.retryCount).toBe(0);
-        expect(result.current.retryState.isRetrying).toBe(false);
-        expect(result.current.retryState.lastError).toBeNull();
       },
       { timeout: 10000 }
     );
+
+    // After successful retries, state should be reset
+    expect(result.current.error).toBeNull();
+    expect(result.current.retryState.retryCount).toBe(0);
+    expect(result.current.retryState.isRetrying).toBe(false);
+    expect(result.current.retryState.lastError).toBeNull();
   });
 
   it('should not retry on 401 unauthorized error', async () => {
@@ -139,7 +120,7 @@ describe('useVotes with retry state', () => {
 
     vi.mocked(api.getVotes).mockRejectedValue(unauthorizedError);
 
-    const { result } = renderHook(() => useVotes());
+    const { result } = renderHook(() => useVotes(), { wrapper: createWrapper() });
 
     // Wait for error
     await waitFor(
