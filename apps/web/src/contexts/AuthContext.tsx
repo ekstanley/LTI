@@ -11,8 +11,9 @@
 
 'use client';
 
-import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
 import type { User } from '@ltip/shared';
+import React, { createContext, useState, useEffect, useCallback, useMemo } from 'react';
+
 import {
   login as apiLogin,
   logout as apiLogout,

@@ -19,6 +19,7 @@
  */
 
 import { useContext } from 'react';
+
 import { AuthContext, type AuthContextValue } from '@/contexts/AuthContext';
 
 /**
