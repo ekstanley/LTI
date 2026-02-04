@@ -26,87 +26,14 @@ import {
 import Link from 'next/link';
 
 import { Navigation, LoadingState, ErrorFallback } from '@/components/common';
+import { formatDate } from '@/components/common/DateFormatter';
+import { ContactLink } from '@/components/legislators/ContactLink';
+import { LegislatorInfoCard } from '@/components/legislators/LegislatorInfoCard';
 import { useLegislator } from '@/hooks';
 
 
 interface LegislatorDetailClientProps {
   legislatorId: string;
-}
-
-/**
- * Format date for display
- */
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-/**
- * Info card component for displaying legislator metadata
- */
-function InfoCard({
-  icon: Icon,
-  label,
-  children,
-}: {
-  icon: React.ElementType;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-      </div>
-      <div className="text-gray-900">{children}</div>
-    </div>
-  );
-}
-
-/**
- * Contact link component
- */
-function ContactLink({
-  icon: Icon,
-  label,
-  href,
-  external = false,
-}: {
-  icon: React.ElementType;
-  label: string;
-  href: string;
-  external?: boolean;
-}) {
-  const isExternal = external || href.startsWith('http');
-
-  if (isExternal) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
-      >
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-        <ExternalLink className="h-3 w-3" />
-      </a>
-    );
-  }
-
-  return (
-    <a
-      href={href}
-      className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline"
-    >
-      <Icon className="h-4 w-4" />
-      <span>{label}</span>
-    </a>
-  );
 }
 
 export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientProps) {
@@ -209,28 +136,28 @@ export function LegislatorDetailClient({ legislatorId }: LegislatorDetailClientP
               {/* Info grid */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
                 {/* Chamber */}
-                <InfoCard icon={Building2} label="Chamber">
+                <LegislatorInfoCard icon={Building2} label="Chamber">
                   {CHAMBER_LABELS[legislator.chamber] ?? legislator.chamber}
-                </InfoCard>
+                </LegislatorInfoCard>
 
                 {/* State */}
-                <InfoCard icon={MapPin} label="State">
+                <LegislatorInfoCard icon={MapPin} label="State">
                   {US_STATES[legislator.state as keyof typeof US_STATES] ?? legislator.state}
                   {legislator.district && `, District ${legislator.district}`}
-                </InfoCard>
+                </LegislatorInfoCard>
 
                 {/* Term */}
-                <InfoCard icon={Calendar} label="Current Term">
+                <LegislatorInfoCard icon={Calendar} label="Current Term">
                   {formatDate(legislator.termStart)}
                   {legislator.termEnd && ` - ${formatDate(legislator.termEnd)}`}
-                </InfoCard>
+                </LegislatorInfoCard>
 
                 {/* Bioguide ID */}
-                <InfoCard icon={Users} label="Bioguide ID">
+                <LegislatorInfoCard icon={Users} label="Bioguide ID">
                   <code className="text-sm bg-gray-100 px-2 py-0.5 rounded">
                     {legislator.bioguideId}
                   </code>
-                </InfoCard>
+                </LegislatorInfoCard>
               </div>
 
               {/* Contact Information */}

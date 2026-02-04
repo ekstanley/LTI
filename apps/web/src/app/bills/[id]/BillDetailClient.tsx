@@ -7,78 +7,23 @@
 
 import {
   BILL_TYPES,
-  BILL_STATUS_LABELS,
-  BILL_STATUS_COLORS,
   PARTY_LABELS,
   PARTY_TEXT_COLORS,
   CHAMBER_SHORT_LABELS,
 } from '@ltip/shared';
-import type { Bill, BillType, BillStatus } from '@ltip/shared';
 import { ArrowLeft, Calendar, Users, FileText, Building2, Tag } from 'lucide-react';
 import Link from 'next/link';
 
+import { formatBillId } from '@/components/bills/BillFormatters';
+import { BillInfoCard } from '@/components/bills/BillInfoCard';
+import { StatusBadge } from '@/components/bills/StatusBadge';
 import { Navigation, LoadingState, ErrorFallback } from '@/components/common';
+import { formatDate } from '@/components/common/DateFormatter';
 import { useBill } from '@/hooks';
 
 
 interface BillDetailClientProps {
   billId: string;
-}
-
-/**
- * Format bill ID for display (e.g., "hr-1-119" -> "H.R. 1")
- */
-function formatBillId(bill: Bill): string {
-  const typeLabels: Record<BillType, string> = {
-    hr: 'H.R.',
-    s: 'S.',
-    hjres: 'H.J.Res.',
-    sjres: 'S.J.Res.',
-    hconres: 'H.Con.Res.',
-    sconres: 'S.Con.Res.',
-    hres: 'H.Res.',
-    sres: 'S.Res.',
-  };
-  return `${typeLabels[bill.billType]} ${bill.billNumber}`;
-}
-
-/**
- * Format date for display
- */
-function formatDate(dateString: string): string {
-  return new Date(dateString).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-}
-
-/**
- * Status badge component
- */
-function StatusBadge({ status }: { status: BillStatus }) {
-  const label = BILL_STATUS_LABELS[status] ?? status;
-  const colors = BILL_STATUS_COLORS[status] ?? 'bg-gray-100 text-gray-800';
-  return (
-    <span className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${colors}`}>
-      {label}
-    </span>
-  );
-}
-
-/**
- * Info card component for displaying bill metadata
- */
-function InfoCard({ icon: Icon, label, children }: { icon: React.ElementType; label: string; children: React.ReactNode }) {
-  return (
-    <div className="rounded-lg border border-gray-200 bg-white p-4">
-      <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
-        <Icon className="h-4 w-4" />
-        <span>{label}</span>
-      </div>
-      <div className="text-gray-900">{children}</div>
-    </div>
-  );
 }
 
 export function BillDetailClient({ billId }: BillDetailClientProps) {
@@ -152,7 +97,7 @@ export function BillDetailClient({ billId }: BillDetailClientProps) {
               {/* Info grid */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
                 {/* Sponsor */}
-                <InfoCard icon={Users} label="Sponsor">
+                <BillInfoCard icon={Users} label="Sponsor">
                   {bill.sponsor ? (
                     <Link
                       href={`/legislators/${bill.sponsor.id}`}
@@ -169,28 +114,28 @@ export function BillDetailClient({ billId }: BillDetailClientProps) {
                   ) : (
                     <span className="text-gray-500">Not available</span>
                   )}
-                </InfoCard>
+                </BillInfoCard>
 
                 {/* Chamber */}
-                <InfoCard icon={Building2} label="Originating Chamber">
+                <BillInfoCard icon={Building2} label="Originating Chamber">
                   {CHAMBER_SHORT_LABELS[bill.chamber] ?? bill.chamber}
-                </InfoCard>
+                </BillInfoCard>
 
                 {/* Introduced */}
-                <InfoCard icon={Calendar} label="Introduced">
+                <BillInfoCard icon={Calendar} label="Introduced">
                   {formatDate(bill.introducedDate)}
-                </InfoCard>
+                </BillInfoCard>
 
                 {/* Cosponsors */}
-                <InfoCard icon={Users} label="Cosponsors">
+                <BillInfoCard icon={Users} label="Cosponsors">
                   {bill.cosponsorsCount} {bill.cosponsorsCount === 1 ? 'cosponsor' : 'cosponsors'}
-                </InfoCard>
+                </BillInfoCard>
 
                 {/* Policy Area */}
                 {bill.policyArea && (
-                  <InfoCard icon={Tag} label="Policy Area">
+                  <BillInfoCard icon={Tag} label="Policy Area">
                     {bill.policyArea}
-                  </InfoCard>
+                  </BillInfoCard>
                 )}
               </div>
 
