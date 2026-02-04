@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import {
   useRetryState,
   isRetryableError,
@@ -149,13 +149,20 @@ describe('useRetry', () => {
 
       const mockFn = vi.fn().mockResolvedValue('success');
 
-      const data = await result.current.trackRetry(mockFn);
+      let data: string;
+      await act(async () => {
+        data = await result.current.trackRetry(mockFn);
+      });
 
-      expect(data).toBe('success');
+      expect(data!).toBe('success');
       expect(mockFn).toHaveBeenCalledTimes(1);
-      expect(result.current.retryState.retryCount).toBe(0);
-      expect(result.current.retryState.isRetrying).toBe(false);
-      expect(result.current.retryState.lastError).toBeNull();
+
+      // Wait for all state updates to complete
+      await waitFor(() => {
+        expect(result.current.retryState.retryCount).toBe(0);
+        expect(result.current.retryState.isRetrying).toBe(false);
+        expect(result.current.retryState.lastError).toBeNull();
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -172,13 +179,20 @@ describe('useRetry', () => {
         .mockRejectedValueOnce(networkError)
         .mockResolvedValue('success');
 
-      const data = await result.current.trackRetry(mockFn);
+      let data: string;
+      await act(async () => {
+        data = await result.current.trackRetry(mockFn);
+      });
 
-      expect(data).toBe('success');
+      expect(data!).toBe('success');
       expect(mockFn).toHaveBeenCalledTimes(3); // Initial + 2 retries
-      expect(result.current.retryState.retryCount).toBe(0);
-      expect(result.current.retryState.isRetrying).toBe(false);
-      expect(result.current.retryState.lastError).toBeNull();
+
+      // Wait for all state updates to complete after successful retry
+      await waitFor(() => {
+        expect(result.current.retryState.retryCount).toBe(0);
+        expect(result.current.retryState.isRetrying).toBe(false);
+        expect(result.current.retryState.lastError).toBeNull();
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -191,10 +205,16 @@ describe('useRetry', () => {
       const networkError = new NetworkError('Connection failed');
       const mockFn = vi.fn().mockRejectedValue(networkError);
 
-      await expect(result.current.trackRetry(mockFn)).rejects.toThrow('Connection failed');
+      await act(async () => {
+        await expect(result.current.trackRetry(mockFn)).rejects.toThrow('Connection failed');
+      });
+
       expect(mockFn).toHaveBeenCalledTimes(3); // Initial + 2 retries
-      expect(result.current.retryState.isRetrying).toBe(false);
-      // Last error might be cleared by React cleanup, so just check it's not retrying
+
+      // Wait for all state updates to complete after max retries
+      await waitFor(() => {
+        expect(result.current.retryState.isRetrying).toBe(false);
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -207,11 +227,17 @@ describe('useRetry', () => {
       const validationError = new ApiError(400, 'VALIDATION_ERROR', 'Invalid input');
       const mockFn = vi.fn().mockRejectedValue(validationError);
 
-      await expect(result.current.trackRetry(mockFn)).rejects.toThrow('Invalid input');
+      await act(async () => {
+        await expect(result.current.trackRetry(mockFn)).rejects.toThrow('Invalid input');
+      });
+
       expect(mockFn).toHaveBeenCalledTimes(1); // Only initial attempt
-      expect(result.current.retryState.retryCount).toBe(0);
-      expect(result.current.retryState.isRetrying).toBe(false);
-      // Don't check lastError as React may have cleaned it up
+
+      // Wait for state updates to complete
+      await waitFor(() => {
+        expect(result.current.retryState.retryCount).toBe(0);
+        expect(result.current.retryState.isRetrying).toBe(false);
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -225,18 +251,31 @@ describe('useRetry', () => {
       const networkError = new NetworkError('Connection failed');
       const mockFn = vi.fn().mockRejectedValue(networkError);
 
-      // Start the retry operation
-      const promise = result.current.trackRetry(mockFn, controller.signal);
+      // Start the retry operation and handle abort properly
+      let promise: Promise<unknown>;
+      await act(async () => {
+        promise = result.current.trackRetry(mockFn, controller.signal);
 
-      // Let first attempt complete
-      await new Promise((resolve) => setTimeout(resolve, 10));
+        // Let first attempt complete
+        await new Promise((resolve) => setTimeout(resolve, 10));
 
-      // Abort before first retry
-      controller.abort();
+        // Abort before first retry
+        controller.abort();
 
-      await expect(promise).rejects.toThrow('Request was cancelled');
+        // Catch the rejection to prevent unhandled error
+        promise.catch(() => {
+          // Expected abort error
+        });
+      });
+
+      await expect(promise!).rejects.toThrow('Request was cancelled');
       // Verify no retries occurred after abort
       expect(mockFn.mock.calls.length).toBeLessThanOrEqual(2); // Initial + maybe 1 retry before abort
+
+      // Wait for state cleanup
+      await waitFor(() => {
+        expect(result.current.retryState.isRetrying).toBe(false);
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -250,12 +289,19 @@ describe('useRetry', () => {
       const networkError = new NetworkError('Connection failed');
       const mockFn = vi.fn().mockRejectedValue(networkError);
 
-      await expect(result.current.trackRetry(mockFn)).rejects.toThrow();
+      await act(async () => {
+        await expect(result.current.trackRetry(mockFn)).rejects.toThrow();
+      });
 
       // onRetry should be called for each retry (not initial attempt)
       expect(onRetry).toHaveBeenCalledTimes(2);
       expect(onRetry).toHaveBeenNthCalledWith(1, 1, networkError);
       expect(onRetry).toHaveBeenNthCalledWith(2, 2, networkError);
+
+      // Wait for state cleanup
+      await waitFor(() => {
+        expect(result.current.retryState.isRetrying).toBe(false);
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
@@ -268,22 +314,30 @@ describe('useRetry', () => {
       const networkError = new NetworkError('Connection failed');
       const mockFn = vi.fn().mockRejectedValue(networkError);
 
-      try {
-        await result.current.trackRetry(mockFn);
-      } catch {
-        // Expected to fail
-      }
+      await act(async () => {
+        try {
+          await result.current.trackRetry(mockFn);
+        } catch {
+          // Expected to fail
+        }
+      });
 
-      // Give React time to update state
-      await new Promise((resolve) => setTimeout(resolve, 10));
+      // Wait for all retry state updates to complete
+      await waitFor(() => {
+        expect(result.current.retryState.isRetrying).toBe(false);
+      });
 
       // Reset
-      result.current.resetRetry();
+      await act(async () => {
+        result.current.resetRetry();
+      });
 
-      // State should be cleared
-      expect(result.current.retryState.retryCount).toBe(0);
-      expect(result.current.retryState.isRetrying).toBe(false);
-      expect(result.current.retryState.lastError).toBeNull();
+      // Wait for reset to complete and state to be cleared
+      await waitFor(() => {
+        expect(result.current.retryState.retryCount).toBe(0);
+        expect(result.current.retryState.isRetrying).toBe(false);
+        expect(result.current.retryState.lastError).toBeNull();
+      });
 
       vi.useFakeTimers(); // Restore fake timers
     });
