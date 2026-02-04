@@ -8,11 +8,11 @@
 import { Router, type Router as RouterType } from 'express';
 import { z } from 'zod';
 
+import { logger } from '../lib/logger.js';
 import { requireAuth } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { validate } from '../middleware/validate.js';
 import { accountLockoutService } from '../services/accountLockout.service.js';
-import { logger } from '../lib/logger.js';
 
 export const adminRouter: RouterType = Router();
 

@@ -15,7 +15,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response } from 'express';
 
 import { accountLockout, trackLoginAttempt } from '../../middleware/accountLockout.js';
 import { accountLockoutService } from '../../services/accountLockout.service.js';
@@ -293,14 +293,9 @@ describe('Account Lockout Middleware - Integration Tests', () => {
       process.env.TRUST_PROXY = 'false';
 
       const realIp = '192.168.2.3';
-      const spoofedIp = '1.2.3.4';
 
-      // Make 5 attempts with spoofed header (should use realIp)
+      // Make 5 attempts (middleware uses realIp, ignores x-forwarded-for)
       for (let i = 0; i < 5; i++) {
-        const req = createMockRequest({
-          headers: { 'x-forwarded-for': spoofedIp },
-          ip: realIp,
-        });
         // Manually extract IP as middleware does
         const ip = realIp; // Middleware ignores x-forwarded-for when TRUST_PROXY=false
         await accountLockoutService.recordFailedAttempt('test@example.com', ip);
@@ -684,7 +679,6 @@ describe('Account Lockout Middleware - Integration Tests', () => {
       const ip = '192.168.5.3';
 
       // Mock checkLockout to throw error
-      const originalCheckLockout = accountLockoutService.checkLockout;
       vi.spyOn(accountLockoutService, 'checkLockout').mockRejectedValueOnce(
         new Error('Cache error')
       );

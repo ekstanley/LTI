@@ -14,8 +14,8 @@
 
 import type { Request, Response, NextFunction } from 'express';
 
-import { accountLockoutService } from '../services/accountLockout.service.js';
 import { logger } from '../lib/logger.js';
+import { accountLockoutService } from '../services/accountLockout.service.js';
 
 /**
  * Extract client IP address from request
