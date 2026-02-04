@@ -69,7 +69,7 @@ describe('useBills with retry state', () => {
       .mockRejectedValueOnce(networkError)
       .mockResolvedValue(mockBillsResponse);
 
-    const { result } = renderHook(() => useBills({ congressNumber: 119 }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useBills({ congressNumber: 119 }), { wrapper: createWrapper() });
 
     // Initial state
     expect(result.current.retryState.retryCount).toBe(0);
@@ -87,6 +87,9 @@ describe('useBills with retry state', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
+
+    // Cleanup to prevent state updates on unmounted component
+    unmount();
   });
 
   it('should not track retries for non-retryable errors', async () => {
@@ -94,7 +97,7 @@ describe('useBills with retry state', () => {
 
     vi.mocked(api.getBills).mockRejectedValue(validationError);
 
-    const { result } = renderHook(() => useBills({ congressNumber: 119 }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useBills({ congressNumber: 119 }), { wrapper: createWrapper() });
 
     // Wait for error (trackRetry doesn't retry non-retryable errors)
     await waitFor(
@@ -107,6 +110,9 @@ describe('useBills with retry state', () => {
     // Should not have retry attempts (non-retryable error)
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
+
+    // Cleanup
+    unmount();
   });
 
   it('should reset retry state on successful fetch', async () => {
@@ -115,7 +121,7 @@ describe('useBills with retry state', () => {
     // First: success
     vi.mocked(api.getBills).mockResolvedValueOnce(mockBillsResponse);
 
-    const { result, rerender } = renderHook(
+    const { result, rerender, unmount } = renderHook(
       ({ enabled }) => useBills({ congressNumber: 119, enabled }),
       { initialProps: { enabled: true }, wrapper: createWrapper() }
     );
@@ -150,5 +156,8 @@ describe('useBills with retry state', () => {
       },
       { timeout: 5000 }
     );
+
+    // Cleanup
+    unmount();
   });
 });

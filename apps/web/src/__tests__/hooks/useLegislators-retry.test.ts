@@ -67,7 +67,7 @@ describe('useLegislators with retry state', () => {
       .mockRejectedValueOnce(serverError)
       .mockResolvedValue(mockLegislatorsResponse);
 
-    const { result } = renderHook(() => useLegislators({ chamber: 'senate' }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useLegislators({ chamber: 'senate' }), { wrapper: createWrapper() });
 
     // Initial state
     expect(result.current.retryState.retryCount).toBe(0);
@@ -85,6 +85,9 @@ describe('useLegislators with retry state', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
+
+    // Cleanup
+    unmount();
   });
 
   it('should track retry on 429 rate limit error', async () => {
@@ -95,7 +98,7 @@ describe('useLegislators with retry state', () => {
       .mockRejectedValueOnce(rateLimitError)
       .mockResolvedValue(mockLegislatorsResponse);
 
-    const { result } = renderHook(() => useLegislators({ party: 'D' }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useLegislators({ party: 'D' }), { wrapper: createWrapper() });
 
     // Wait for eventual success (trackRetry retries and succeeds)
     await waitFor(
@@ -109,6 +112,9 @@ describe('useLegislators with retry state', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
+
+    // Cleanup
+    unmount();
   });
 
   it('should not track retries for 404 not found error', async () => {
@@ -116,7 +122,7 @@ describe('useLegislators with retry state', () => {
 
     vi.mocked(api.getLegislators).mockRejectedValue(notFoundError);
 
-    const { result } = renderHook(() => useLegislators({ state: 'XX' }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useLegislators({ state: 'XX' }), { wrapper: createWrapper() });
 
     // Wait for error (trackRetry doesn't retry non-retryable errors)
     await waitFor(
@@ -129,5 +135,8 @@ describe('useLegislators with retry state', () => {
     // Should not have retry attempts (404 is not retryable)
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
+
+    // Cleanup
+    unmount();
   });
 });

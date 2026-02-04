@@ -69,7 +69,7 @@ describe('useVotes with retry state', () => {
       .mockRejectedValueOnce(networkError)
       .mockResolvedValue(mockVotesResponse);
 
-    const { result } = renderHook(() => useVotes({ chamber: 'house' }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useVotes({ chamber: 'house' }), { wrapper: createWrapper() });
 
     // Initial state
     expect(result.current.retryState.retryCount).toBe(0);
@@ -87,6 +87,9 @@ describe('useVotes with retry state', () => {
     expect(result.current.error).toBeNull();
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
+
+    // Cleanup
+    unmount();
   });
 
   it('should track multiple retry attempts before success', async () => {
@@ -98,7 +101,7 @@ describe('useVotes with retry state', () => {
       .mockRejectedValueOnce(serverError)
       .mockResolvedValue(mockVotesResponse);
 
-    const { result } = renderHook(() => useVotes({ billId: 'hr-1-119' }), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useVotes({ billId: 'hr-1-119' }), { wrapper: createWrapper() });
 
     // Wait for eventual success (trackRetry retries multiple times and succeeds)
     await waitFor(
@@ -113,6 +116,9 @@ describe('useVotes with retry state', () => {
     expect(result.current.retryState.retryCount).toBe(0);
     expect(result.current.retryState.isRetrying).toBe(false);
     expect(result.current.retryState.lastError).toBeNull();
+
+    // Cleanup
+    unmount();
   });
 
   it('should not retry on 401 unauthorized error', async () => {
@@ -120,7 +126,7 @@ describe('useVotes with retry state', () => {
 
     vi.mocked(api.getVotes).mockRejectedValue(unauthorizedError);
 
-    const { result } = renderHook(() => useVotes(), { wrapper: createWrapper() });
+    const { result, unmount } = renderHook(() => useVotes(), { wrapper: createWrapper() });
 
     // Wait for error
     await waitFor(
@@ -137,5 +143,8 @@ describe('useVotes with retry state', () => {
 
     // Verify no additional API calls were made
     expect(vi.mocked(api.getVotes)).toHaveBeenCalledTimes(1);
+
+    // Cleanup
+    unmount();
   });
 });

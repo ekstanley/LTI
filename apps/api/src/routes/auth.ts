@@ -8,8 +8,8 @@
 import { Router, type Router as RouterType, type Request } from 'express';
 
 import { config } from '../config.js';
-import { requireAuth } from '../middleware/auth.js';
 import { accountLockout, trackLoginAttempt } from '../middleware/accountLockout.js';
+import { requireAuth } from '../middleware/auth.js';
 import { authRateLimiter } from '../middleware/authRateLimiter.js';
 import { ApiError } from '../middleware/error.js';
 import { validate } from '../middleware/validate.js';

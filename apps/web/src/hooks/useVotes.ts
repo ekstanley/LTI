@@ -10,6 +10,7 @@ import useSWR from 'swr';
 import { swrConfig } from '@/config/env';
 import { getVotes, getVote, type VotesQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
+
 import { useRetryState, type RetryState } from './useRetry';
 
 export interface UseVotesOptions extends VotesQueryParams {

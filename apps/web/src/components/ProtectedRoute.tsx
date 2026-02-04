@@ -23,10 +23,11 @@
 
 'use client';
 
-import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { useAuth } from '@/hooks/useAuth';
+import { useEffect } from 'react';
+
 import { LoadingState } from '@/components/common/LoadingState';
+import { useAuth } from '@/hooks/useAuth';
 
 // ============================================================================
 // Types
