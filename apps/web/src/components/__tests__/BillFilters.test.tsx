@@ -222,7 +222,7 @@ describe('BillFilters', () => {
       // Error should appear after rerender
       const error = await screen.findByRole('alert');
       expect(error).toBeInTheDocument();
-      expect(error).toHaveTextContent(/cannot exceed 500 characters/i);
+      expect(error).toHaveTextContent(/cannot exceed 200 characters/i);
     });
   });
 
