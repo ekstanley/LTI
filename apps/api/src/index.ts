@@ -21,6 +21,7 @@ import { conflictsRouter } from './routes/conflicts.js';
 import { healthRouter } from './routes/health.js';
 import { legislatorsRouter } from './routes/legislators.js';
 import { votesRouter } from './routes/votes.js';
+import { accountLockoutService } from './services/accountLockout.service.js';
 import { setupWebSocket } from './websocket/index.js';
 
 const app = express();
@@ -117,6 +118,11 @@ async function bootstrap() {
   // Initialize cache (Redis or fallback to memory)
   await initializeCache();
   logger.info({ cacheType: getCacheType() }, 'Cache initialized');
+
+  // Initialize account lockout Lua script for atomic operations
+  if (getCacheType() === 'redis') {
+    await accountLockoutService.initializeScript();
+  }
 
   // Start server
   server.listen(config.port, () => {

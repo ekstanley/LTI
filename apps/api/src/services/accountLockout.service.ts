@@ -66,9 +66,55 @@ class LockoutKeys {
 }
 
 /**
+ * Lua script for atomic increment and check
+ *
+ * KEYS[1]: lockout:attempts:username:<email>
+ * KEYS[2]: lockout:attempts:ip:<ip>
+ * ARGV[1]: TTL in seconds (900 for 15-minute window)
+ *
+ * Returns: [usernameAttempts, ipAttempts]
+ *
+ * Atomicity Guarantee:
+ * - INCR and EXPIRE execute atomically within Redis
+ * - No interleaving between operations possible
+ * - Eliminates TOCTOU race condition (CWE-367)
+ * - Consistent count under concurrent access
+ */
+const ATOMIC_INCREMENT_SCRIPT = `
+local usernameAttempts = redis.call('INCR', KEYS[1])
+redis.call('EXPIRE', KEYS[1], tonumber(ARGV[1]))
+
+local ipAttempts = redis.call('INCR', KEYS[2])
+redis.call('EXPIRE', KEYS[2], tonumber(ARGV[1]))
+
+return {usernameAttempts, ipAttempts}
+`;
+
+/**
  * Account Lockout Service
  */
 class AccountLockoutService {
+  private scriptSha: string | null = null;
+
+  /**
+   * Preload Lua script into Redis for optimal performance
+   * Called on service initialization
+   */
+  async initializeScript(): Promise<void> {
+    const cache = getCache();
+    try {
+      if (!cache.scriptLoad) {
+        logger.warn('Cache client does not support Lua scripts (memory fallback)');
+        return;
+      }
+      this.scriptSha = await cache.scriptLoad(ATOMIC_INCREMENT_SCRIPT);
+      logger.info({ scriptSha: this.scriptSha }, 'Account lockout Lua script preloaded');
+    } catch (error) {
+      logger.error({ error }, 'Failed to preload Lua script, will use EVAL fallback');
+      this.scriptSha = null;
+    }
+  }
+
   async checkLockout(email: string, ip: string): Promise<LockoutInfo> {
     const cache = getCache();
     
@@ -116,6 +162,18 @@ class AccountLockoutService {
     }
   }
 
+  /**
+   * Record a failed login attempt atomically
+   *
+   * Uses Lua script to increment counters atomically, eliminating TOCTOU race condition.
+   * Single Redis operation ensures correct count under concurrent access.
+   *
+   * SECURITY FIX: Issue #33 - Replaces non-atomic GET+SET with atomic INCR+EXPIRE
+   *
+   * @param email - User email address
+   * @param ip - Client IP address
+   * @returns Lockout information including current attempt count and lock status
+   */
   async recordFailedAttempt(email: string, ip: string): Promise<LockoutInfo> {
     const cache = getCache();
 
@@ -123,14 +181,68 @@ class AccountLockoutService {
       const usernameKey = LockoutKeys.attemptsByUsername(email);
       const ipKey = LockoutKeys.attemptsByIP(ip);
 
-      const usernameVal = await cache.get(usernameKey);
-      const ipVal = await cache.get(ipKey);
-      
-      const usernameAttempts = parseInt((usernameVal as string) || '0', 10) + 1;
-      const ipAttempts = parseInt((ipVal as string) || '0', 10) + 1;
+      // Execute atomic increment via Lua script
+      // Returns [usernameAttempts, ipAttempts] as array
+      let usernameAttempts: number = 0;
+      let ipAttempts: number = 0;
 
-      await cache.set(usernameKey, usernameAttempts.toString(), LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC);
-      await cache.set(ipKey, ipAttempts.toString(), LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC);
+      try {
+        // Check if Lua script support is available (Redis only, not memory cache)
+        if (!cache.evalsha || !cache.eval) {
+          // Memory cache fallback: use non-atomic operations
+          logger.warn('Lua scripts not supported, using non-atomic fallback');
+          const usernameVal = await cache.get(usernameKey);
+          const ipVal = await cache.get(ipKey);
+
+          usernameAttempts = parseInt((usernameVal as string) || '0', 10) + 1;
+          ipAttempts = parseInt((ipVal as string) || '0', 10) + 1;
+
+          await cache.set(usernameKey, usernameAttempts.toString(), LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC);
+          await cache.set(ipKey, ipAttempts.toString(), LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC);
+        } else {
+          // Execute Lua script for atomic increment
+          let result: unknown;
+
+          if (this.scriptSha) {
+            // Use preloaded script SHA for performance (1 RTT)
+            result = await cache.evalsha(
+              this.scriptSha,
+              2,
+              usernameKey,
+              ipKey,
+              LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC.toString()
+            );
+          } else {
+            // Fallback to EVAL if script not preloaded
+            // Note: This is Redis EVAL command for Lua scripts, not JavaScript eval()
+            result = await cache.eval(
+              ATOMIC_INCREMENT_SCRIPT,
+              2,
+              usernameKey,
+              ipKey,
+              LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC.toString()
+            );
+          }
+
+          // Parse Lua script response
+          if (!Array.isArray(result) || result.length !== 2) {
+            throw new Error('Invalid Lua script response format');
+          }
+
+          usernameAttempts = parseInt(String(result[0]), 10);
+          ipAttempts = parseInt(String(result[1]), 10);
+
+          if (isNaN(usernameAttempts) || isNaN(ipAttempts)) {
+            throw new Error('Invalid attempt count from Lua script');
+          }
+        }
+      } catch (scriptError) {
+        logger.error(
+          { error: scriptError, email, ip },
+          'Lua script execution failed, cannot record attempt'
+        );
+        throw scriptError;
+      }
 
       const maxAttempts = Math.max(usernameAttempts, ipAttempts);
 
