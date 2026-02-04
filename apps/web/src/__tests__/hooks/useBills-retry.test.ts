@@ -34,8 +34,6 @@ describe('useBills with retry state', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
-    // Clean up any pending timers/promises
-    vi.clearAllTimers();
   });
 
   const mockBillsResponse: PaginatedResponse<Bill> = {
