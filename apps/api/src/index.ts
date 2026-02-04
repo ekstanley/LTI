@@ -12,6 +12,7 @@ import { initializeCache, disconnectCache, getCacheType } from './db/redis.js';
 import { logger } from './lib/logger.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { rateLimiter } from './middleware/rateLimiter.js';
+import { adminRouter } from './routes/admin.js';
 import { analysisRouter } from './routes/analysis.js';
 import { authRouter } from './routes/auth.js';
 import { billsRouter } from './routes/bills.js';
@@ -20,6 +21,7 @@ import { conflictsRouter } from './routes/conflicts.js';
 import { healthRouter } from './routes/health.js';
 import { legislatorsRouter } from './routes/legislators.js';
 import { votesRouter } from './routes/votes.js';
+import { accountLockoutService } from './services/accountLockout.service.js';
 import { setupWebSocket } from './websocket/index.js';
 
 const app = express();
@@ -99,6 +101,7 @@ app.use('/api/v1/analysis', analysisRouter);
 app.use('/api/v1/conflicts', conflictsRouter);
 app.use('/api/v1/committees', committeesRouter);
 app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/admin', adminRouter);
 
 // Error handling
 app.use(notFoundHandler);
@@ -115,6 +118,11 @@ async function bootstrap() {
   // Initialize cache (Redis or fallback to memory)
   await initializeCache();
   logger.info({ cacheType: getCacheType() }, 'Cache initialized');
+
+  // Initialize account lockout Lua script for atomic operations
+  if (getCacheType() === 'redis') {
+    await accountLockoutService.initializeScript();
+  }
 
   // Start server
   server.listen(config.port, () => {

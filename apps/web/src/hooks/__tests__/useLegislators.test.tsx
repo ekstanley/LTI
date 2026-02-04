@@ -18,11 +18,15 @@ import * as api from '@/lib/api';
 import { useLegislators, useLegislator } from '../useLegislators';
 
 
-// Mock the API module
-vi.mock('@/lib/api', () => ({
-  getLegislators: vi.fn(),
-  getLegislator: vi.fn(),
-}));
+// Mock the API module - partially mock to preserve error utilities
+vi.mock('@/lib/api', async () => {
+  const actual = await vi.importActual('@/lib/api');
+  return {
+    ...actual,
+    getLegislators: vi.fn(),
+    getLegislator: vi.fn(),
+  };
+});
 
 // Mock SWR cache key utility
 vi.mock('@/lib/utils/swr', () => ({

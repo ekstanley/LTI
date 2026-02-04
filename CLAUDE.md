@@ -389,6 +389,144 @@ export function BillFilters({ filters, onChange, onClear, isLoading }: BillFilte
 }
 ```
 
+### Authentication Pattern (AuthContext)
+
+**Using authentication in components**:
+
+```typescript
+// apps/web/src/app/dashboard/page.tsx
+'use client';
+
+import { useAuth } from '@/hooks/useAuth';
+import { ProtectedRoute } from '@/components/ProtectedRoute';
+
+export default function DashboardPage() {
+  return (
+    <ProtectedRoute>
+      <Dashboard />
+    </ProtectedRoute>
+  );
+}
+
+function Dashboard() {
+  const { user, logout, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  return (
+    <div>
+      <h1>Welcome, {user?.name}!</h1>
+      <p>Email: {user?.email}</p>
+      <p>Role: {user?.role}</p>
+      <button onClick={() => void logout()}>Logout</button>
+    </div>
+  );
+}
+```
+
+**Login page example**:
+
+```typescript
+// apps/web/src/app/login/page.tsx
+'use client';
+
+import { useState } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+export default function LoginPage() {
+  const { login, isLoading, error } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      await login(email, password);
+
+      // Redirect to return URL or dashboard
+      const returnUrl = searchParams.get('return') || '/dashboard';
+      router.push(returnUrl);
+    } catch (err) {
+      // Error is already set in auth state
+      console.error('Login failed:', err);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <h1>Login</h1>
+
+      {error && (
+        <div className="error" role="alert">
+          {error}
+        </div>
+      )}
+
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          id="email"
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <div>
+        <label htmlFor="password">Password</label>
+        <input
+          id="password"
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          disabled={isLoading}
+        />
+      </div>
+
+      <button type="submit" disabled={isLoading}>
+        {isLoading ? 'Logging in...' : 'Login'}
+      </button>
+    </form>
+  );
+}
+```
+
+**AuthProvider setup** (in app layout):
+
+```typescript
+// apps/web/src/app/layout.tsx
+import { AuthProvider } from '@/contexts/AuthContext';
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <html lang="en">
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+**Key features**:
+- ✅ Session persistence in localStorage
+- ✅ Automatic token refresh every 5 minutes
+- ✅ CSRF token management
+- ✅ Protected route wrapper component
+- ✅ Loading and error states
+- ✅ Type-safe with TypeScript
+
 ### Custom Hook Pattern
 
 ```typescript
@@ -707,12 +845,202 @@ const count = bills.length; // No useMemo needed
 
 ---
 
+## Authentication and Security Patterns
+
+### Account Lockout Protection
+
+**Implementation**: CR-2026-02-02-001 (Issue #4)
+
+The platform uses Redis-based account lockout with exponential backoff to prevent brute force attacks:
+
+```typescript
+// apps/api/src/middleware/accountLockout.ts
+import { accountLockout, trackLoginAttempt } from '../middleware/accountLockout';
+
+// Apply to login route
+router.post('/api/v1/auth/login',
+  accountLockout,  // Pre-login lockout check
+  async (req, res, next) => {
+    try {
+      // ... authentication logic ...
+
+      // Track attempt after login
+      await trackLoginAttempt(email, ip, success);
+
+      res.json({ token, user });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+```
+
+**Lockout Progression**:
+- 1st lockout: 15 minutes (5 failures)
+- 2nd lockout: 1 hour
+- 3rd lockout: 6 hours
+- 4th+ lockout: 24 hours
+
+**Admin Unlock**:
+```typescript
+// Requires ADMIN_EMAILS environment variable
+POST /api/v1/admin/unlock-account
+{
+  "email": "user@example.com"
+}
+```
+
+**Configuration**:
+```bash
+# .env
+ADMIN_EMAILS=admin@example.com,security-team@example.com
+```
+
+### Retry Logic with Exponential Backoff
+
+**Implementation**: CR-2026-02-02-001 (Issue #19)
+
+All data-fetching hooks include retry state for network resilience:
+
+```typescript
+// apps/web/src/hooks/useBills.ts
+import { useRetryState } from './useRetry';
+
+export function useBills(filters: BillFilters) {
+  const { data, error, isLoading } = useSWR(key, fetcher);
+
+  // Add retry state tracking
+  const retryState = useRetryState({ maxRetries: 3 });
+
+  return {
+    bills: data,
+    error,
+    isLoading,
+    retryState, // ← NEW: { retryCount, isRetrying, lastError }
+  };
+}
+```
+
+**Using retry state in components**:
+```typescript
+function BillsList() {
+  const { bills, error, retryState } = useBills({ congressNumber: 119 });
+
+  return (
+    <div>
+      {/* Show retry feedback */}
+      {retryState.isRetrying && (
+        <div className="alert alert-info">
+          Network issue detected. Retrying ({retryState.retryCount}/3)...
+        </div>
+      )}
+
+      {/* Show error with recovery */}
+      {error && !retryState.isRetrying && (
+        <div className="alert alert-error">
+          <p>{error.message}</p>
+          <button onClick={() => mutate()}>Try Again</button>
+        </div>
+      )}
+
+      {/* Bills list */}
+      {bills?.map(bill => <BillCard key={bill.id} bill={bill} />)}
+    </div>
+  );
+}
+```
+
+**Error Classification**:
+- ✅ **Retryable**: NetworkError, 5xx, 429
+- ❌ **Non-retryable**: 4xx (except 429), ValidationError, AbortError
+
+**Backoff Formula**:
+```typescript
+backoff = min(1000ms * 2^attempt, 30000ms) + jitter(±10%)
+// Results: 1s → 2s → 4s → 8s (max 3 retries)
+```
+
+### Admin Middleware Pattern
+
+**Current Implementation** (Temporary):
+
+```typescript
+// apps/api/src/routes/admin.ts
+function requireAdmin(req: any, _res: any, next: any): void {
+  if (!req.user) {
+    throw ApiError.unauthorized('Authentication required');
+  }
+
+  // Use ADMIN_EMAILS environment variable
+  const adminEmailsStr = process.env.ADMIN_EMAILS || '';
+  const adminEmails = adminEmailsStr
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean);
+
+  const isAdmin = adminEmails.includes(req.user.email.toLowerCase());
+
+  if (!isAdmin) {
+    logger.warn(
+      { userId: req.user.id, email: req.user.email, path: req.path },
+      'SECURITY: Non-admin user attempted to access admin endpoint'
+    );
+    throw ApiError.forbidden('Admin access required');
+  }
+
+  next();
+}
+
+// Usage
+router.post('/admin/unlock-account', requireAuth, requireAdmin, handler);
+```
+
+**⚠️ Note**: This is a temporary solution. Proper RBAC with database-driven roles is planned (Issue #TBD).
+
+### Security Best Practices Checklist
+
+**Pre-Implementation**:
+- [ ] Validate database schema matches TypeScript types
+- [ ] Check for existing security middleware
+- [ ] Review OWASP Top 10 relevant to feature
+- [ ] Design with defense-in-depth
+
+**During Implementation**:
+- [ ] Never hardcode secrets or credentials
+- [ ] Use Zod for input validation
+- [ ] Implement proper error handling (no internal details exposed)
+- [ ] Add audit logging for sensitive operations
+
+**Post-Implementation**:
+- [ ] Run security code review
+- [ ] Test both positive and negative cases
+- [ ] Verify no secrets committed
+- [ ] Update SECURITY.md if new vulnerability addressed
+
+### Known Security Issues
+
+See `docs/change-control/PHASE-2-CODE-REVIEW-2026-02-02.md` for complete list:
+
+**HIGH Priority** (6 issues):
+1. IP spoofing vulnerability (CWE-441) - 2 hours
+2. Race condition in lockout check (TOCTOU) - 4-6 hours
+3. AbortController memory leak - 30 mins
+4. External signal listener leak - 1 hour
+5. Code duplication (96 lines) - 4-6 hours
+6. SWR double-retry conflict - 2 hours
+
+**Remediation**: Scheduled for next sprint (20-28 hours total)
+
+---
+
 ## Resources
 
 - [Project Repository](https://github.com/ekstanley/LTI)
 - [GitHub Issues](https://github.com/ekstanley/LTI/issues)
+- [Security Policy](SECURITY.md)
 - [Change Control Process](docs/change-control/CHANGE-CONTROL.md)
 - [Multi-Agent Workflow](.claude/Agents.md)
+- [Security Sprint Summary](docs/change-control/2026-02-02-cr-001-security-reliability-sprint.md)
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Zod Documentation](https://zod.dev)
 - [Vitest Documentation](https://vitest.dev)

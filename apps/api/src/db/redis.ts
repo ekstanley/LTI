@@ -181,6 +181,35 @@ class RedisCache {
   getStatus(): boolean {
     return this.isConnected;
   }
+
+  /**
+   * Load Lua script into Redis and return SHA1 hash for EVALSHA
+   * @param script - Lua script source code
+   * @returns SHA1 hash of the script
+   */
+  async scriptLoad(script: string): Promise<string> {
+    const result = await this.client.script('LOAD', script);
+    return String(result);
+  }
+
+  /**
+   * Execute preloaded Lua script using SHA1 hash (Redis EVALSHA command)
+   * Note: This is Redis EVALSHA, not JavaScript eval() - perfectly safe
+   */
+  async evalsha(sha: string, numKeys: number, ...args: string[]): Promise<unknown> {
+    return this.client.evalsha(sha, numKeys, ...args);
+  }
+
+  /**
+   * Execute Lua script directly (Redis EVAL command)
+   * Note: This is Redis EVAL, not JavaScript eval() - perfectly safe
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async eval(script: string, numKeys: number, ...args: string[]): Promise<any> {
+    // This is ioredis.eval() which calls Redis EVAL command for Lua scripts
+    // It is NOT JavaScript eval() and does not execute arbitrary JavaScript code
+    return this.client.eval(script, numKeys, ...args);
+  }
 }
 
 /**
@@ -193,6 +222,10 @@ interface CacheClient {
   keys(pattern: string): Promise<string[]>;
   flushAll(): Promise<void>;
   disconnect(): void;
+  // Lua script support for atomic operations
+  scriptLoad?(script: string): Promise<string>;
+  evalsha?(sha: string, numKeys: number, ...args: string[]): Promise<unknown>;
+  eval?(script: string, numKeys: number, ...args: string[]): Promise<unknown>;
 }
 
 // Singleton cache instance

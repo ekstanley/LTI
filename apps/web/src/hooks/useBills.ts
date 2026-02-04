@@ -1,14 +1,16 @@
 /**
- * SWR hook for bills data fetching
+ * SWR hook for bills data fetching with retry state tracking
  * @module hooks/useBills
  */
 
 import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
+import { useCallback } from 'react';
 import useSWR from 'swr';
 
 import { swrConfig } from '@/config/env';
 import { getBills, getBill, type BillsQueryParams } from '@/lib/api';
 import { createStableCacheKey } from '@/lib/utils/swr';
+import { useRetryState, type RetryState } from './useRetry';
 
 export interface UseBillsOptions extends BillsQueryParams {
   /** Enable/disable fetching */
@@ -21,37 +23,54 @@ export interface UseBillsResult {
   isLoading: boolean;
   isValidating: boolean;
   error: Error | null;
+  retryState: RetryState;
   mutate: () => Promise<PaginatedResponse<Bill> | undefined>;
 }
 
 /**
- * Hook for fetching paginated bills list
+ * Hook for fetching paginated bills list with retry state tracking
+ *
+ * Tracks retry attempts and surfaces retry state for UI feedback.
+ * Retries network errors and 5xx responses with exponential backoff.
  *
  * @example
  * ```tsx
- * const { bills, pagination, isLoading, error } = useBills({
+ * const { bills, pagination, isLoading, error, retryState } = useBills({
  *   congressNumber: 119,
  *   limit: 20,
  * });
+ *
+ * // Show retry status
+ * {retryState.isRetrying && (
+ *   <p>Retrying ({retryState.retryCount}/3)...</p>
+ * )}
  * ```
  */
 export function useBills(options: UseBillsOptions = {}): UseBillsResult {
   const { enabled = true, ...params } = options;
 
+  // Use shared retry state hook
+  const { retryState, trackRetry } = useRetryState();
+
   // Build stable cache key from params (prevents cache collisions)
   const key = enabled ? createStableCacheKey('bills', params) : null;
+
+  // Wrap fetcher with retry logic
+  const fetcher = useCallback(
+    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => {
+      return trackRetry(() => getBills(params, signal), signal);
+    },
+    [params, trackRetry]
+  );
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
     PaginatedResponse<Bill>,
     Error
-  >(
-    key,
-    async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => getBills(params, signal),
-    {
-      revalidateOnFocus: swrConfig.revalidateOnFocus,
-      dedupingInterval: swrConfig.dedupingInterval,
-    }
-  );
+  >(key, fetcher, {
+    revalidateOnFocus: swrConfig.revalidateOnFocus,
+    dedupingInterval: swrConfig.dedupingInterval,
+    shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
+  });
 
   return {
     bills: data?.data ?? [],
@@ -59,6 +78,7 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
     isLoading,
     isValidating,
     error: error ?? null,
+    retryState,
     mutate,
   };
 }

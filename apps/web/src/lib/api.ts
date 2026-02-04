@@ -9,6 +9,9 @@ import type {
   BillAnalysis,
   ConflictOfInterest,
   PaginatedResponse,
+  LoginRequest,
+  LoginResponse,
+  RefreshTokenResponse,
 } from '@ltip/shared';
 
 import { apiConfig } from '@/config/env';
@@ -1023,4 +1026,78 @@ export async function getBillConflicts(
 
 export async function checkHealth(): Promise<{ status: string }> {
   return fetcher<{ status: string }>('/api/health');
+}
+
+// ============================================================================
+// Authentication API
+// ============================================================================
+
+/**
+ * Login with email and password
+ *
+ * @param credentials - User credentials (email, password)
+ * @param signal - Optional AbortSignal for request cancellation
+ * @returns Login response with token and user data
+ * @throws {ApiError} If credentials are invalid (401)
+ * @throws {NetworkError} If network request fails
+ */
+export async function login(
+  credentials: LoginRequest,
+  signal?: AbortSignal
+): Promise<LoginResponse> {
+  // Validate email format
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailPattern.test(credentials.email)) {
+    throw new ValidationError('Invalid email format', 'email');
+  }
+
+  // Validate password presence (don't validate strength here)
+  if (!credentials.password || credentials.password.length === 0) {
+    throw new ValidationError('Password is required', 'password');
+  }
+
+  return fetcher<LoginResponse>(
+    '/api/v1/auth/login',
+    {
+      method: 'POST',
+      body: JSON.stringify(credentials),
+      ...(signal && { signal }),
+    }
+  );
+}
+
+/**
+ * Logout current user
+ *
+ * @param signal - Optional AbortSignal for request cancellation
+ * @throws {NetworkError} If network request fails
+ */
+export async function logout(signal?: AbortSignal): Promise<void> {
+  await fetcher<{ success: boolean }>(
+    '/api/v1/auth/logout',
+    {
+      method: 'POST',
+      ...(signal && { signal }),
+    }
+  );
+}
+
+/**
+ * Refresh authentication token
+ *
+ * @param signal - Optional AbortSignal for request cancellation
+ * @returns Refresh response with new token and user data
+ * @throws {ApiError} If token is invalid or expired (401)
+ * @throws {NetworkError} If network request fails
+ */
+export async function refreshAuthToken(
+  signal?: AbortSignal
+): Promise<RefreshTokenResponse> {
+  return fetcher<RefreshTokenResponse>(
+    '/api/v1/auth/refresh',
+    {
+      method: 'POST',
+      ...(signal && { signal }),
+    }
+  );
 }

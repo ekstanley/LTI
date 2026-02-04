@@ -229,3 +229,103 @@ export interface BillStatusChangeEvent {
 }
 
 export type WebSocketEvent = VoteUpdateEvent | TallyUpdateEvent | BillStatusChangeEvent;
+
+// ============================================================================
+// Authentication Types
+// ============================================================================
+
+/**
+ * User role type
+ */
+export type UserRole = 'admin' | 'user';
+
+/**
+ * Authenticated user
+ */
+export interface User {
+  /** Unique user identifier */
+  id: string;
+  /** User email address */
+  email: string;
+  /** User display name */
+  name: string;
+  /** User role */
+  role: UserRole;
+}
+
+/**
+ * Login request payload
+ */
+export interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+/**
+ * Login response payload
+ */
+export interface LoginResponse {
+  /** JWT authentication token */
+  token: string;
+  /** Authenticated user data */
+  user: User;
+}
+
+/**
+ * Token refresh response payload
+ */
+export interface RefreshTokenResponse {
+  /** New JWT authentication token */
+  token: string;
+  /** Updated user data */
+  user: User;
+}
+
+// ============================================================================
+// Account Lockout Types
+// ============================================================================
+
+/**
+ * Account lockout information
+ */
+export interface AccountLockoutInfo {
+  /** Whether account is currently locked */
+  isLocked: boolean;
+  /** Remaining lockout duration in seconds (0 if not locked) */
+  remainingSeconds: number;
+  /** Current failure count */
+  attemptCount: number;
+  /** ISO timestamp when lockout expires (empty if not locked) */
+  lockoutExpiresAt: string;
+}
+
+/**
+ * Account lockout error response
+ */
+export interface AccountLockedError {
+  error: 'account_locked';
+  message: string;
+  /** Seconds until account is unlocked */
+  retryAfter: number;
+  /** ISO timestamp when lockout expires */
+  expiresAt: string;
+}
+
+/**
+ * Admin unlock request
+ */
+export interface AdminUnlockRequest {
+  /** Email of account to unlock */
+  email: string;
+}
+
+/**
+ * Admin unlock response
+ */
+export interface AdminUnlockResponse {
+  success: boolean;
+  /** Email that was unlocked */
+  email: string;
+  /** Whether any lockout data was actually cleared */
+  wasLocked: boolean;
+}
