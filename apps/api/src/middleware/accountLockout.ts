@@ -65,8 +65,9 @@ export async function accountLockout(
       return;
     }
 
-    // Extract email and IP
-    const email = req.body?.email as string | undefined;
+    // Extract email and IP - cast req.body from Express `any` to typed record
+    const body = req.body as Record<string, unknown> | undefined;
+    const email = typeof body?.email === 'string' ? body.email : undefined;
     const ip = getClientIP(req);
 
     if (!email || typeof email !== 'string') {

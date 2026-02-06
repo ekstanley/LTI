@@ -26,6 +26,16 @@ import { oauthService } from '../services/oauth.service.js';
 
 export const authRouter: RouterType = Router();
 
+/**
+ * Get a cookie value from the request with type safety.
+ * Express types req.cookies as `any` (from cookie-parser). This accessor
+ * narrows the type to satisfy @typescript-eslint/no-unsafe-* rules.
+ */
+function getCookie(req: Request, name: string): string | undefined {
+  const cookies = req.cookies as Record<string, string> | undefined;
+  return cookies?.[name];
+}
+
 // Cookie configuration for refresh tokens
 const REFRESH_TOKEN_COOKIE = 'refreshToken';
 const COOKIE_OPTIONS = {
@@ -189,8 +199,7 @@ authRouter.post('/login', authRateLimiter, accountLockout, validate(loginSchema)
  */
 authRouter.post('/refresh', async (req, res, next) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const refreshToken = getCookie(req, REFRESH_TOKEN_COOKIE);
 
     if (!refreshToken) {
       res.status(401).json({
@@ -201,7 +210,6 @@ authRouter.post('/refresh', async (req, res, next) => {
     }
 
     const metadata = getClientMetadata(req);
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     const result = await authService.refresh(refreshToken, metadata);
 
     if (!result.success) {
@@ -250,11 +258,9 @@ authRouter.post('/refresh', async (req, res, next) => {
  */
 authRouter.post('/logout', async (req, res, next) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
-    const refreshToken = req.cookies?.[REFRESH_TOKEN_COOKIE];
+    const refreshToken = getCookie(req, REFRESH_TOKEN_COOKIE);
 
     if (refreshToken) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
       await authService.logout(refreshToken);
     }
 

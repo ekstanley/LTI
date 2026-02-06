@@ -188,7 +188,7 @@ class AccountLockoutService {
 
       try {
         // Check if Lua script support is available (Redis only, not memory cache)
-        if (!cache.evalsha || !cache.eval) {
+        if (!cache.evalsha || !cache.runLuaScript) {
           // Memory cache fallback: use non-atomic operations
           logger.warn('Lua scripts not supported, using non-atomic fallback');
           const usernameVal = await cache.get(usernameKey);
@@ -215,7 +215,7 @@ class AccountLockoutService {
           } else {
             // Fallback to EVAL if script not preloaded
             // Note: This is Redis EVAL command for Lua scripts, not JavaScript eval()
-            result = await cache.eval(
+            result = await cache.runLuaScript!(
               ATOMIC_INCREMENT_SCRIPT,
               2,
               usernameKey,

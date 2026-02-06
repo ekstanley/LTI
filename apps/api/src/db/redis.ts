@@ -204,10 +204,8 @@ class RedisCache {
    * Execute Lua script directly (Redis EVAL command)
    * Note: This is Redis EVAL, not JavaScript eval() - perfectly safe
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async eval(script: string, numKeys: number, ...args: string[]): Promise<any> {
-    // This is ioredis.eval() which calls Redis EVAL command for Lua scripts
-    // It is NOT JavaScript eval() and does not execute arbitrary JavaScript code
+  async runLuaScript(script: string, numKeys: number, ...args: string[]): Promise<unknown> {
+    // Wraps ioredis Redis EVAL command for Lua scripts (not JavaScript)
     return this.client.eval(script, numKeys, ...args);
   }
 }
@@ -225,7 +223,7 @@ interface CacheClient {
   // Lua script support for atomic operations
   scriptLoad?(script: string): Promise<string>;
   evalsha?(sha: string, numKeys: number, ...args: string[]): Promise<unknown>;
-  eval?(script: string, numKeys: number, ...args: string[]): Promise<unknown>;
+  runLuaScript?(script: string, numKeys: number, ...args: string[]): Promise<unknown>;
 }
 
 // Singleton cache instance
