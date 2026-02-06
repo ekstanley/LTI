@@ -28,6 +28,41 @@ votesRouter.get('/', validate(listVotesSchema, 'query'), async (req, res, next) 
   }
 });
 
+// Compare voting records between two legislators
+// ID validation: alphanumeric, dash, underscore only (prevents injection attacks)
+// NOTE: This route must come before /:id to avoid shadowing
+votesRouter.get('/compare', validate(compareVotesSchema, 'query'), async (req, res, next) => {
+  try {
+    const validated = compareVotesSchema.parse(req.query);
+    const comparison = await voteService.compareVotingRecords(
+      validated.legislator1,
+      validated.legislator2,
+      validated.congressNumber
+    );
+    res.json(comparison);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get recent votes by chamber
+// NOTE: This route must come before /:id to avoid shadowing
+votesRouter.get(
+  '/recent/:chamber',
+  validate(recentVotesChamberSchema, 'params'),
+  validate(recentVotesQuerySchema, 'query'),
+  async (req, res, next) => {
+    try {
+      const { chamber } = recentVotesChamberSchema.parse(req.params);
+      const { limit } = recentVotesQuerySchema.parse(req.query);
+      const votes = await voteService.getRecent(chamber, limit);
+      res.json({ data: votes });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
 // Get single vote by ID
 // ID validation: alphanumeric, dash, underscore only (prevents injection attacks)
 votesRouter.get('/:id', validate(getVoteSchema, 'params'), async (req, res, next) => {
@@ -67,39 +102,6 @@ votesRouter.get('/:id/party-breakdown', validate(getVoteSchema, 'params'), async
     const { id } = getVoteSchema.parse(req.params);
     const partyBreakdown = await voteService.getPartyBreakdown(id);
     res.json({ data: partyBreakdown });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// Get recent votes by chamber
-votesRouter.get(
-  '/recent/:chamber',
-  validate(recentVotesChamberSchema, 'params'),
-  validate(recentVotesQuerySchema, 'query'),
-  async (req, res, next) => {
-    try {
-      const { chamber } = recentVotesChamberSchema.parse(req.params);
-      const { limit } = recentVotesQuerySchema.parse(req.query);
-      const votes = await voteService.getRecent(chamber, limit);
-      res.json({ data: votes });
-    } catch (error) {
-      next(error);
-    }
-  }
-);
-
-// Compare voting records between two legislators
-// ID validation: alphanumeric, dash, underscore only (prevents injection attacks)
-votesRouter.get('/compare', validate(compareVotesSchema, 'query'), async (req, res, next) => {
-  try {
-    const validated = compareVotesSchema.parse(req.query);
-    const comparison = await voteService.compareVotingRecords(
-      validated.legislator1,
-      validated.legislator2,
-      validated.congressNumber
-    );
-    res.json(comparison);
   } catch (error) {
     next(error);
   }
