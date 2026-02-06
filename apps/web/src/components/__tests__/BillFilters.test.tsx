@@ -199,14 +199,14 @@ describe('BillFilters', () => {
 
       // Type into search to mark it as touched
       const searchInput = screen.getByPlaceholderText(/search bills/i);
-      fireEvent.change(searchInput, { target: { value: 'a'.repeat(501) } });
+      fireEvent.change(searchInput, { target: { value: 'a'.repeat(201) } });
 
       // Wait for onChange to be called
       expect(mockOnChange).toHaveBeenCalled();
 
-      // Rerender with the invalid filters
+      // Rerender with the invalid filters (exceeds 200-char limit from shared schema)
       const invalidFilters: BillFiltersType = {
-        search: 'a'.repeat(501),
+        search: 'a'.repeat(201),
         chamber: '',
         status: '',
       };
@@ -293,11 +293,11 @@ describe('BillFilters', () => {
 
       // Type into search to mark it as touched
       const searchInput = screen.getByPlaceholderText(/search bills/i);
-      fireEvent.change(searchInput, { target: { value: 'a'.repeat(501) } });
+      fireEvent.change(searchInput, { target: { value: 'a'.repeat(201) } });
 
-      // Rerender with invalid filters
+      // Rerender with invalid filters (exceeds 200-char limit from shared schema)
       const invalidFilters: BillFiltersType = {
-        search: 'a'.repeat(501),
+        search: 'a'.repeat(201),
         chamber: '',
         status: '',
       };
