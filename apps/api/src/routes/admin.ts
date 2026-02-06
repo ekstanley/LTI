@@ -5,7 +5,7 @@
  * Includes account management, lockout control, and system monitoring.
  */
 
-import { Router, type Router as RouterType } from 'express';
+import { Router, type Router as RouterType, type Request, type Response, type NextFunction } from 'express';
 import { z } from 'zod';
 
 import { logger } from '../lib/logger.js';
@@ -28,7 +28,7 @@ export const adminRouter: RouterType = Router();
  * TEMPORARY IMPLEMENTATION: Uses ADMIN_EMAILS environment variable.
  * TODO: Replace with proper role-based access control from database (see Issue #TBD)
  */
-function requireAdmin(req: any, _res: any, next: any): void {
+function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) {
     throw ApiError.unauthorized('Authentication required');
   }
