@@ -321,6 +321,141 @@ describe('Votes Routes Integration Tests', () => {
     });
   });
 
-  // NOTE: /compare route tests removed - the /:id route is defined before /compare
-  // in votes.ts, so Express matches /:id with id='compare' first, making /compare unreachable.
+  describe('GET /api/v1/votes/compare', () => {
+    const validLegislator1 = 'L000001';
+    const validLegislator2 = 'L000002';
+
+    it('returns 200 with comparison data for valid legislator IDs', async () => {
+      const mockComparison = {
+        legislator1: {
+          id: validLegislator1,
+          fullName: 'John Doe',
+          party: 'democrat',
+          state: 'CA',
+        },
+        legislator2: {
+          id: validLegislator2,
+          fullName: 'Jane Smith',
+          party: 'republican',
+          state: 'TX',
+        },
+        agreement: {
+          totalVotes: 100,
+          sameVotes: 35,
+          differentVotes: 65,
+          agreementPercentage: 35.0,
+        },
+        votes: [
+          {
+            voteId: 'vote-123',
+            question: 'On Passage',
+            legislator1Position: 'yes',
+            legislator2Position: 'no',
+            agreed: false,
+          },
+        ],
+      };
+
+      vi.mocked(voteService.compareVotingRecords).mockResolvedValue(
+        mockComparison as unknown as Awaited<ReturnType<typeof voteService.compareVotingRecords>>
+      );
+
+      const response = await request(app).get('/api/v1/votes/compare').query({
+        legislator1: validLegislator1,
+        legislator2: validLegislator2,
+      });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual(mockComparison);
+      expect(voteService.compareVotingRecords).toHaveBeenCalledWith(
+        validLegislator1,
+        validLegislator2,
+        undefined
+      );
+    });
+
+    it('returns 400 when legislator1 is missing', async () => {
+      const response = await request(app).get('/api/v1/votes/compare').query({
+        legislator2: validLegislator2,
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+      expect(response.body.details.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: 'legislator1',
+          }),
+        ])
+      );
+    });
+
+    it('returns 400 when legislator2 is missing', async () => {
+      const response = await request(app).get('/api/v1/votes/compare').query({
+        legislator1: validLegislator1,
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+      expect(response.body.details.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: 'legislator2',
+          }),
+        ])
+      );
+    });
+
+    it('forwards optional congressNumber to service', async () => {
+      const mockComparison = {
+        legislator1: { id: validLegislator1, fullName: 'John Doe', party: 'democrat', state: 'CA' },
+        legislator2: { id: validLegislator2, fullName: 'Jane Smith', party: 'republican', state: 'TX' },
+        agreement: { totalVotes: 50, sameVotes: 20, differentVotes: 30, agreementPercentage: 40.0 },
+        votes: [],
+      };
+
+      vi.mocked(voteService.compareVotingRecords).mockResolvedValue(
+        mockComparison as unknown as Awaited<ReturnType<typeof voteService.compareVotingRecords>>
+      );
+
+      const response = await request(app).get('/api/v1/votes/compare').query({
+        legislator1: validLegislator1,
+        legislator2: validLegislator2,
+        congressNumber: 118,
+      });
+
+      expect(response.status).toBe(200);
+      expect(voteService.compareVotingRecords).toHaveBeenCalledWith(validLegislator1, validLegislator2, 118);
+    });
+
+    it('returns 400 for invalid legislator ID format', async () => {
+      const response = await request(app).get('/api/v1/votes/compare').query({
+        legislator1: 'invalid@id!',
+        legislator2: validLegislator2,
+      });
+
+      expect(response.status).toBe(400);
+      expect(response.body.code).toBe('VALIDATION_ERROR');
+      expect(response.body.details.errors).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            path: 'legislator1',
+            message: expect.stringContaining('Invalid legislator ID format'),
+          }),
+        ])
+      );
+    });
+
+    it('returns 500 when service throws error', async () => {
+      vi.mocked(voteService.compareVotingRecords).mockRejectedValue(new Error('Database error'));
+
+      const response = await request(app).get('/api/v1/votes/compare').query({
+        legislator1: validLegislator1,
+        legislator2: validLegislator2,
+      });
+
+      expect(response.status).toBe(500);
+      expect(response.body.code).toBe('INTERNAL_ERROR');
+    });
+  });
 });
