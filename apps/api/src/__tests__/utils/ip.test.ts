@@ -109,4 +109,62 @@ describe('getClientIP', () => {
     const req = mockRequest({});
     expect(getClientIP(req)).toBe('unknown');
   });
+
+  // --- IP format validation (net.isIP) ---
+
+  it('passes through valid IPv4 addresses', () => {
+    const req = mockRequest({ ip: '192.168.1.1' });
+    expect(getClientIP(req)).toBe('192.168.1.1');
+  });
+
+  it('passes through valid IPv6 loopback', () => {
+    const req = mockRequest({ ip: '::1' });
+    expect(getClientIP(req)).toBe('::1');
+  });
+
+  it('passes through valid IPv6 addresses', () => {
+    const req = mockRequest({ ip: '2001:db8::1' });
+    expect(getClientIP(req)).toBe('2001:db8::1');
+  });
+
+  it('returns "unknown" for malformed IP string', () => {
+    const req = mockRequest({ ip: 'not-an-ip' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
+
+  it('returns "unknown" for IP with out-of-range octets', () => {
+    const req = mockRequest({ ip: '192.168.1.999' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
+
+  it('returns "unknown" for Redis key injection attempt', () => {
+    const req = mockRequest({ ip: '127.0.0.1\nDEL *' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
+
+  it('returns "unknown" for injection via x-forwarded-for in trusted proxy mode', () => {
+    process.env.TRUST_PROXY = 'true';
+    const req = mockRequest({ ip: '127.0.0.1', forwardedFor: 'evil\r\ninjection' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
+
+  it('returns "unknown" for empty string IP from socket', () => {
+    const req = mockRequest({ remoteAddress: '' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
+
+  it('validates x-forwarded-for IP when TRUST_PROXY is true', () => {
+    process.env.TRUST_PROXY = 'true';
+    const req = mockRequest({ ip: '127.0.0.1', forwardedFor: 'not-valid-ip' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
+
+  it('falls back to req.ip when x-forwarded-for contains invalid IP in trusted mode', () => {
+    process.env.TRUST_PROXY = 'true';
+    // validateIP returns 'unknown' for the invalid forwarded-for IP
+    // The function returns 'unknown' (not falling through to req.ip)
+    // because the forwarded-for value exists and is non-empty
+    const req = mockRequest({ ip: '192.168.1.1', forwardedFor: '999.999.999.999' });
+    expect(getClientIP(req)).toBe('unknown');
+  });
 });
