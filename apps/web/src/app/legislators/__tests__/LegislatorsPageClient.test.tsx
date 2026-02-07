@@ -42,6 +42,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: true,
         isValidating: false,
         error: null,
+        state: { status: 'loading' },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -61,6 +62,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: new Error('Network error'),
+        state: { status: 'error', error: new Error('Network error') },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: mockMutate,
       });
@@ -80,6 +82,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: new Error('Network error'),
+        state: { status: 'error', error: new Error('Network error') },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: mockMutate,
       });
@@ -101,6 +104,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: [], pagination: createMockPagination({ total: 0, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -118,6 +122,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: [], pagination: createMockPagination({ total: 0, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -147,6 +152,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: mockLegislators, pagination: createMockPagination({ total: 2, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -171,6 +177,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: [mockLegislator], pagination: createMockPagination({ total: 1, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -197,6 +204,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: [mockLegislator], pagination: createMockPagination({ total: 1, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -221,6 +229,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: [mockLegislator], pagination: createMockPagination({ total: 1, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -240,6 +249,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'idle' },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -266,6 +276,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'idle' },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -292,6 +303,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'idle' },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -322,6 +334,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'idle' },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -369,6 +382,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: mockLegislators, pagination: createMockPagination({ total: 50, limit: 24, offset: 0, hasMore: true }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });
@@ -393,6 +407,7 @@ describe('LegislatorsPageClient', () => {
         isLoading: false,
         isValidating: false,
         error: null,
+        state: { status: 'success', data: { data: mockLegislators, pagination: createMockPagination({ total: 10, limit: 24, offset: 0, hasMore: false }) } },
         retryState: { retryCount: 0, isRetrying: false, lastError: null },
         mutate: vi.fn(),
       });

@@ -114,6 +114,7 @@ describe('BillsPageClient', () => {
       isLoading: true,
       isValidating: false,
       error: null,
+      state: { status: 'loading' },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -134,6 +135,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: mockError,
+      state: { status: 'error', error: mockError },
       retryState: { retryCount: 1, isRetrying: false, lastError: mockError },
       mutate: mockMutate,
     });
@@ -157,6 +159,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: [], pagination: { total: 0, limit: 20, offset: 0, hasMore: false } } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -179,6 +182,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: mockBills, pagination: createMockPagination({ total: 2, hasMore: false }) } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -218,6 +222,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: mockBills, pagination: createMockPagination({ total: 1, hasMore: false }) } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -237,6 +242,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'idle' },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -255,6 +261,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: [], pagination: { total: 0, limit: 20, offset: 0, hasMore: false } } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -288,6 +295,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: mockBills, pagination: createMockPagination({ total: 50, limit: 20, offset: 0, hasMore: true }) } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -309,6 +317,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: mockBills, pagination: createMockPagination({ total: 50, limit: 20, offset: 0, hasMore: true }) } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -332,6 +341,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: mockBills, pagination: createMockPagination({ total: 1, limit: 20, offset: 0, hasMore: false }) } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -348,6 +358,7 @@ describe('BillsPageClient', () => {
       isLoading: true,
       isValidating: false,
       error: null,
+      state: { status: 'loading' },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
@@ -366,6 +377,7 @@ describe('BillsPageClient', () => {
       isLoading: false,
       isValidating: false,
       error: null,
+      state: { status: 'success', data: { data: [], pagination: { total: 0, limit: 20, offset: 0, hasMore: false } } },
       retryState: { retryCount: 0, isRetrying: false, lastError: null },
       mutate: vi.fn(),
     });
