@@ -68,7 +68,11 @@ Closes 4 remaining quality gaps identified by post-merge codebase audit: API tes
 | `ed3388f` | fix(api): add 80% coverage thresholds to vitest config |
 | `328fd19` | fix(api): validate IP format with net.isIP() before return |
 | `355ca3b` | feat(api): add persistent audit logging with AuditLog model |
-| TBD | docs: update CLAUDE.md and add CR-013 change control record |
+| `e572a83` | docs: update CLAUDE.md and add CR-013 change control record |
+| `77c521f` | fix(api): correct import order in ip.ts for ESLint compliance |
+| `a275cab` | feat(api): add AuditLog migration for persistent audit logging |
+| `eca08dd` | fix(web): increase timeout for retry exhaustion tests |
+| `59e1679` | fix(web): use trailing-number timeout for retry exhaustion tests |
 
 ---
 
