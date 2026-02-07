@@ -41,6 +41,10 @@ export class ApiError extends Error {
   static internal(message = 'Internal server error') {
     return new ApiError(500, 'INTERNAL_ERROR', message);
   }
+
+  static serviceUnavailable(message = 'Service temporarily unavailable') {
+    return new ApiError(503, 'SERVICE_UNAVAILABLE', message);
+  }
 }
 
 export function notFoundHandler(req: Request, res: Response) {
@@ -88,6 +92,15 @@ export const errorHandler: ErrorRequestHandler = (
       code: err.code,
       message: err.message,
       ...(err.details && { details: err.details }),
+    });
+    return;
+  }
+
+  // Handle lockout service errors (fail-closed: Redis unavailable during auth)
+  if (err.name === 'LockoutServiceError') {
+    res.status(503).json({
+      code: 'SERVICE_UNAVAILABLE',
+      message: 'Authentication service temporarily unavailable. Please try again later.',
     });
     return;
   }

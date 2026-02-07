@@ -16,6 +16,7 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { logger } from '../lib/logger.js';
 import { accountLockoutService } from '../services/accountLockout.service.js';
+// LockoutServiceError is checked by err.name in the error handler (middleware/error.ts)
 
 /**
  * Extract client IP address from request
@@ -103,9 +104,11 @@ export async function accountLockout(
     // We'll track the result in the route handler
     next();
   } catch (error) {
-    logger.error({ error }, 'Account lockout middleware error');
-    // Fail open - allow request to proceed on middleware error
-    next();
+    logger.error({ error }, 'SECURITY: Account lockout check failed - blocking request (fail-closed)');
+    res.status(503).json({
+      error: 'service_unavailable',
+      message: 'Authentication service temporarily unavailable. Please try again later.',
+    });
   }
 }
 
@@ -146,7 +149,12 @@ export async function trackLoginAttempt(
       }
     }
   } catch (error) {
-    logger.error({ error, email, ip, success }, 'Failed to track login attempt');
-    // Don't throw - tracking failures shouldn't break login flow
+    if (!success) {
+      // SECURITY: Failed login + Redis error = must propagate (fail-closed)
+      logger.error({ error, email, ip }, 'SECURITY: Failed to record failed attempt - propagating (fail-closed)');
+      throw error;
+    }
+    // Successful login + Redis error = non-critical (lockout TTL will expire)
+    logger.warn({ error, email, ip }, 'Failed to reset lockout after successful login (non-critical)');
   }
 }

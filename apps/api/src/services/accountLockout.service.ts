@@ -18,6 +18,19 @@ import { getCache,  getCacheType } from '../db/redis.js';
 import { logger } from '../lib/logger.js';
 
 /**
+ * Error thrown when lockout service cannot verify or record lockout state.
+ * Callers MUST treat this as "deny access" (fail-closed).
+ */
+export class LockoutServiceError extends Error {
+  public readonly cause: unknown;
+  constructor(operation: string, cause: unknown) {
+    super(`Lockout service unavailable: ${operation} failed`);
+    this.name = 'LockoutServiceError';
+    this.cause = cause;
+  }
+}
+
+/**
  * Lockout configuration — reads from environment at call time
  * so that test overrides and runtime changes are respected.
  */
@@ -156,13 +169,8 @@ class AccountLockoutService {
         lockoutExpiresAt: 0,
       };
     } catch (error) {
-      logger.error({ error, email, ip }, 'Failed to check lockout status');
-      return {
-        isLocked: false,
-        remainingSeconds: 0,
-        attemptCount: 0,
-        lockoutExpiresAt: 0,
-      };
+      logger.error({ error, email, ip }, 'SECURITY: Lockout check failed - denying request (fail-closed)');
+      throw new LockoutServiceError('checkLockout', error);
     }
   }
 
@@ -273,13 +281,8 @@ class AccountLockoutService {
         lockoutExpiresAt: 0,
       };
     } catch (error) {
-      logger.error({ error, email, ip }, 'Failed to record failed attempt');
-      return {
-        isLocked: false,
-        remainingSeconds: 0,
-        attemptCount: 0,
-        lockoutExpiresAt: 0,
-      };
+      logger.error({ error, email, ip }, 'SECURITY: Failed to record attempt - denying request (fail-closed)');
+      throw new LockoutServiceError('recordFailedAttempt', error);
     }
   }
 
@@ -332,13 +335,8 @@ class AccountLockoutService {
         lockoutExpiresAt: expiresAt,
       };
     } catch (error) {
-      logger.error({ error, email, ip }, 'Failed to trigger lockout');
-      return {
-        isLocked: false,
-        remainingSeconds: 0,
-        attemptCount,
-        lockoutExpiresAt: 0,
-      };
+      logger.error({ error, email, ip }, 'SECURITY: Failed to trigger lockout - denying request (fail-closed)');
+      throw new LockoutServiceError('triggerLockout', error);
     }
   }
 

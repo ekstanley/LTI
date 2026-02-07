@@ -22,7 +22,18 @@ vi.mock('../../services/accountLockout.service.js', () => ({
     recordFailedAttempt: vi.fn().mockResolvedValue({ isLocked: false }),
     resetLockout: vi.fn().mockResolvedValue(undefined),
   },
+  LockoutServiceError: class LockoutServiceError extends Error {
+    public readonly cause: unknown;
+    constructor(operation: string, cause: unknown) {
+      super(`Lockout service unavailable: ${operation} failed`);
+      this.name = 'LockoutServiceError';
+      this.cause = cause;
+    }
+  },
 }));
+
+// Import mocked service to restore implementations after clearAllMocks
+import { accountLockoutService } from '../../services/accountLockout.service.js';
 
 // Mock logger to avoid noise in tests
 vi.mock('../../lib/logger.js', () => ({
@@ -68,6 +79,13 @@ describe('accountLockout - IP Extraction Security', () => {
     mockNext = vi.fn();
 
     vi.clearAllMocks();
+    // Restore mock implementations cleared by clearAllMocks
+    vi.mocked(accountLockoutService.checkLockout).mockResolvedValue({
+      isLocked: false,
+      remainingSeconds: 0,
+      attemptCount: 0,
+      lockoutExpiresAt: 0,
+    });
   });
 
   afterEach(() => {
