@@ -128,6 +128,11 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ltip_test
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -143,12 +148,14 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter @ltip/api db:generate
 
+      - name: Push database schema
+        run: pnpm --filter @ltip/api db:push
+
+      - name: Build shared packages
+        run: pnpm --filter @ltip/shared build
+
       - name: Run tests
         run: pnpm test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ltip_test
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
 
   docker-build:
     name: Docker Build
