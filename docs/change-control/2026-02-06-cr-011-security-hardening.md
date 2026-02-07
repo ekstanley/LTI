@@ -60,9 +60,9 @@ Resolves the 2 remaining HIGH-severity issues from the Phase 2 Code Review (PHAS
 
 | Hash | Message |
 |------|---------|
-| TBD | fix(api): extract getClientIP utility with TRUST_PROXY guard (CWE-441) |
-| TBD | fix(web): stabilize SWR fetcher identity with useRef for params |
-| TBD | docs: add CR-011 security hardening change control record |
+| `cc563d2` | fix(api): extract getClientIP utility with TRUST_PROXY guard (CWE-441) |
+| `2bfb05e` | fix(web): stabilize SWR fetcher identity with useRef for params |
+| `d240279` | docs: add CR-011 security hardening change control record |
 
 ---
 
