@@ -267,6 +267,9 @@ importers:
       '@ltip/tsconfig':
         specifier: workspace:*
         version: link:../tsconfig
+      '@types/node':
+        specifier: ^22.19.7
+        version: 22.19.7
       '@vitest/coverage-v8':
         specifier: ^4.0.18
         version: 4.0.18(vitest@4.0.18(@types/node@22.19.7)(jiti@2.6.1)(jsdom@27.4.0(@noble/hashes@1.8.0))(tsx@4.21.0)(yaml@2.8.2))

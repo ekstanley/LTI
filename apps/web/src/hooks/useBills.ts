@@ -3,8 +3,8 @@
  * @module hooks/useBills
  */
 
-import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
-import { useCallback } from 'react';
+import type { AsyncState, Bill, PaginatedResponse, Pagination } from '@ltip/shared';
+import { useCallback, useRef } from 'react';
 import useSWR from 'swr';
 
 import { swrConfig } from '@/config/env';
@@ -25,6 +25,7 @@ export interface UseBillsResult {
   isValidating: boolean;
   error: Error | null;
   retryState: RetryState;
+  state: AsyncState<PaginatedResponse<Bill>>;
   mutate: () => Promise<PaginatedResponse<Bill> | undefined>;
 }
 
@@ -56,12 +57,18 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
   // Build stable cache key from params (prevents cache collisions)
   const key = enabled ? createStableCacheKey('bills', params) : null;
 
-  // Wrap fetcher with retry logic
+  // Ref holds latest params so the fetcher identity stays stable across renders.
+  // SWR triggers refetch via key change, not fetcher identity change.
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
+  // Wrap fetcher with retry logic (stable identity: trackRetry deps are constants)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetcher = useCallback(
     async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => {
-      return trackRetry(() => getBills(params, signal), signal);
+      return trackRetry(() => getBills(paramsRef.current, signal), signal);
     },
-    [params, trackRetry]
+    [trackRetry]
   );
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
@@ -73,6 +80,14 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
     shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
   });
 
+  // Derive discriminated union state for exhaustive pattern matching
+  const state: AsyncState<PaginatedResponse<Bill>> = (() => {
+    if (error) return { status: 'error' as const, error };
+    if (isLoading) return { status: 'loading' as const };
+    if (data) return { status: 'success' as const, data };
+    return { status: 'idle' as const };
+  })();
+
   return {
     bills: data?.data ?? [],
     pagination: data?.pagination ?? null,
@@ -80,6 +95,7 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
     isValidating,
     error: error ?? null,
     retryState,
+    state,
     mutate,
   };
 }

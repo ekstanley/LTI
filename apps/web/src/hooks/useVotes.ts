@@ -3,8 +3,8 @@
  * @module hooks/useVotes
  */
 
-import type { Vote, PaginatedResponse, Pagination } from '@ltip/shared';
-import { useCallback } from 'react';
+import type { AsyncState, Vote, PaginatedResponse, Pagination } from '@ltip/shared';
+import { useCallback, useRef } from 'react';
 import useSWR from 'swr';
 
 import { swrConfig } from '@/config/env';
@@ -25,6 +25,7 @@ export interface UseVotesResult {
   isValidating: boolean;
   error: Error | null;
   retryState: RetryState;
+  state: AsyncState<PaginatedResponse<Vote>>;
   mutate: () => Promise<PaginatedResponse<Vote> | undefined>;
 }
 
@@ -56,12 +57,18 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
   // Build stable cache key from params (prevents cache collisions)
   const key = enabled ? createStableCacheKey('votes', params) : null;
 
-  // Wrap fetcher with retry logic
+  // Ref holds latest params so the fetcher identity stays stable across renders.
+  // SWR triggers refetch via key change, not fetcher identity change.
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
+  // Wrap fetcher with retry logic (stable identity: trackRetry deps are constants)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetcher = useCallback(
     async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => {
-      return trackRetry(() => getVotes(params, signal), signal);
+      return trackRetry(() => getVotes(paramsRef.current, signal), signal);
     },
-    [params, trackRetry]
+    [trackRetry]
   );
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
@@ -73,6 +80,14 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
     shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
   });
 
+  // Derive discriminated union state for exhaustive pattern matching
+  const state: AsyncState<PaginatedResponse<Vote>> = (() => {
+    if (error) return { status: 'error' as const, error };
+    if (isLoading) return { status: 'loading' as const };
+    if (data) return { status: 'success' as const, data };
+    return { status: 'idle' as const };
+  })();
+
   return {
     votes: data?.data ?? [],
     pagination: data?.pagination ?? null,
@@ -80,6 +95,7 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
     isValidating,
     error: error ?? null,
     retryState,
+    state,
     mutate,
   };
 }

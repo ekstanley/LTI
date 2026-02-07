@@ -11,6 +11,7 @@ import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
 import { jwtService } from '../services/jwt.service.js';
 import type { AuthenticatedUser } from '../types/express.js';
+import { mapPrismaRole } from '../utils/roles.js';
 
 import { ApiError } from './error.js';
 
@@ -54,6 +55,7 @@ async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser
       emailVerified: true,
       isActive: true,
       rateLimit: true,
+      role: true,
     },
   });
 
@@ -61,7 +63,10 @@ async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser
     return null;
   }
 
-  return user;
+  return {
+    ...user,
+    role: mapPrismaRole(user.role),
+  };
 }
 
 /**

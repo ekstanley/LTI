@@ -217,6 +217,50 @@ export function formatLabel(key: string): string {
 // Validation Utilities
 // ============================================================================
 
+// ============================================================================
+// Async Utilities
+// ============================================================================
+
+/**
+ * Sleep for specified milliseconds with cancellation support.
+ *
+ * @param ms - Milliseconds to sleep
+ * @param signal - Optional AbortSignal for cancellation
+ * @throws {Error} Error with name='AbortError' if signal is aborted during sleep
+ */
+export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      const error = new Error('Request was cancelled');
+      error.name = 'AbortError';
+      reject(error);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (signal && abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+      resolve();
+    }, ms);
+
+    let abortHandler: (() => void) | null = null;
+    if (signal) {
+      abortHandler = () => {
+        clearTimeout(timeoutId);
+        const error = new Error('Request was cancelled');
+        error.name = 'AbortError';
+        reject(error);
+      };
+      signal.addEventListener('abort', abortHandler, { once: true });
+    }
+  });
+}
+
+// ============================================================================
+// Validation Utilities
+// ============================================================================
+
 /**
  * Validates email format
  */

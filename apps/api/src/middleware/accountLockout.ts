@@ -16,36 +16,8 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { logger } from '../lib/logger.js';
 import { accountLockoutService } from '../services/accountLockout.service.js';
-
-/**
- * Extract client IP address from request
- *
- * SECURITY: Only trusts x-forwarded-for header when TRUST_PROXY=true
- * to prevent IP spoofing attacks (CWE-441).
- *
- * Set TRUST_PROXY=true ONLY if application is behind a trusted proxy
- * (e.g., nginx, Cloudflare, AWS ALB). Otherwise, attackers can bypass
- * IP-based security controls by spoofing the header.
- *
- * @param req - Express request
- * @returns Client IP address (guaranteed to be a string)
- */
-function getClientIP(req: Request): string {
-  // Read TRUST_PROXY environment variable (secure by default: false)
-  const trustProxy = process.env.TRUST_PROXY === 'true';
-
-  // Only trust x-forwarded-for header if behind trusted proxy
-  if (trustProxy) {
-    const forwardedFor = req.headers['x-forwarded-for'];
-    if (typeof forwardedFor === 'string') {
-      const ip = forwardedFor.split(',')[0]?.trim();
-      if (ip) return ip;
-    }
-  }
-
-  // Fall back to direct connection IP
-  return req.ip ?? req.socket.remoteAddress ?? 'unknown';
-}
+import { getClientIP } from '../utils/ip.js';
+// LockoutServiceError is checked by err.name in the error handler (middleware/error.ts)
 
 /**
  * Account lockout middleware
@@ -103,9 +75,11 @@ export async function accountLockout(
     // We'll track the result in the route handler
     next();
   } catch (error) {
-    logger.error({ error }, 'Account lockout middleware error');
-    // Fail open - allow request to proceed on middleware error
-    next();
+    logger.error({ error }, 'SECURITY: Account lockout check failed - blocking request (fail-closed)');
+    res.status(503).json({
+      error: 'service_unavailable',
+      message: 'Authentication service temporarily unavailable. Please try again later.',
+    });
   }
 }
 
@@ -146,7 +120,12 @@ export async function trackLoginAttempt(
       }
     }
   } catch (error) {
-    logger.error({ error, email, ip, success }, 'Failed to track login attempt');
-    // Don't throw - tracking failures shouldn't break login flow
+    if (!success) {
+      // SECURITY: Failed login + Redis error = must propagate (fail-closed)
+      logger.error({ error, email, ip }, 'SECURITY: Failed to record failed attempt - propagating (fail-closed)');
+      throw error;
+    }
+    // Successful login + Redis error = non-critical (lockout TTL will expire)
+    logger.warn({ error, email, ip }, 'Failed to reset lockout after successful login (non-critical)');
   }
 }

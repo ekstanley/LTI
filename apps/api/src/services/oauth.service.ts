@@ -10,6 +10,7 @@ import { randomBytes, createHash } from 'crypto';
 import { config } from '../config.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
+import { mapPrismaRole, type ApiRole } from '../utils/roles.js';
 
 import { jwtService, type TokenPair } from './jwt.service.js';
 
@@ -49,6 +50,7 @@ export interface OAuthResult {
     email: string;
     name: string | null;
     avatarUrl: string | null;
+    role: ApiRole;
     isNewUser: boolean;
   };
   tokens: TokenPair;
@@ -497,6 +499,7 @@ async function findOrCreateOAuthUser(
         name: true,
         avatarUrl: true,
         isActive: true,
+        role: true,
       },
     });
 
@@ -517,6 +520,7 @@ async function findOrCreateOAuthUser(
           name: true,
           avatarUrl: true,
           isActive: true,
+          role: true,
         },
       });
 
@@ -549,6 +553,7 @@ async function findOrCreateOAuthUser(
             name: true,
             avatarUrl: true,
             isActive: true,
+            role: true,
           },
         });
 
@@ -573,6 +578,7 @@ async function findOrCreateOAuthUser(
         email: user.email,
         name: user.name,
         avatarUrl: user.avatarUrl,
+        role: mapPrismaRole(user.role),
         isNewUser,
       },
       tokens,

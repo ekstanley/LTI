@@ -13,22 +13,39 @@
  * - 6+ failures: Exponential backoff (1hr → 6hr → 24hr)
  */
 
+import { config } from '../config.js';
 import { getCache,  getCacheType } from '../db/redis.js';
 import { logger } from '../lib/logger.js';
 
 /**
- * Lockout configuration
+ * Error thrown when lockout service cannot verify or record lockout state.
+ * Callers MUST treat this as "deny access" (fail-closed).
  */
-const LOCKOUT_CONFIG = {
-  MAX_ATTEMPTS: 5,
-  ATTEMPT_WINDOW_SEC: 900,
-  LOCKOUT_DURATIONS: {
-    FIRST: 900,
-    SECOND: 3600,
-    THIRD: 21600,
-    EXTENDED: 86400,
-  },
-} as const;
+export class LockoutServiceError extends Error {
+  public readonly cause: unknown;
+  constructor(operation: string, cause: unknown) {
+    super(`Lockout service unavailable: ${operation} failed`);
+    this.name = 'LockoutServiceError';
+    this.cause = cause;
+  }
+}
+
+/**
+ * Lockout configuration — reads from environment at call time
+ * so that test overrides and runtime changes are respected.
+ */
+function getLockoutConfig() {
+  return {
+    MAX_ATTEMPTS: config.lockout.maxAttempts,
+    ATTEMPT_WINDOW_SEC: config.lockout.windowSeconds,
+    LOCKOUT_DURATIONS: {
+      FIRST: config.lockout.durations.first,
+      SECOND: config.lockout.durations.second,
+      THIRD: config.lockout.durations.third,
+      EXTENDED: config.lockout.durations.extended,
+    },
+  };
+}
 
 /**
  * Lockout information
@@ -152,13 +169,8 @@ class AccountLockoutService {
         lockoutExpiresAt: 0,
       };
     } catch (error) {
-      logger.error({ error, email, ip }, 'Failed to check lockout status');
-      return {
-        isLocked: false,
-        remainingSeconds: 0,
-        attemptCount: 0,
-        lockoutExpiresAt: 0,
-      };
+      logger.error({ error, email, ip }, 'SECURITY: Lockout check failed - denying request (fail-closed)');
+      throw new LockoutServiceError('checkLockout', error);
     }
   }
 
@@ -176,6 +188,7 @@ class AccountLockoutService {
    */
   async recordFailedAttempt(email: string, ip: string): Promise<LockoutInfo> {
     const cache = getCache();
+    const lockoutCfg = getLockoutConfig();
 
     try {
       const usernameKey = LockoutKeys.attemptsByUsername(email);
@@ -197,8 +210,8 @@ class AccountLockoutService {
           usernameAttempts = parseInt((usernameVal as string) || '0', 10) + 1;
           ipAttempts = parseInt((ipVal as string) || '0', 10) + 1;
 
-          await cache.set(usernameKey, usernameAttempts.toString(), LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC);
-          await cache.set(ipKey, ipAttempts.toString(), LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC);
+          await cache.set(usernameKey, usernameAttempts.toString(), lockoutCfg.ATTEMPT_WINDOW_SEC);
+          await cache.set(ipKey, ipAttempts.toString(), lockoutCfg.ATTEMPT_WINDOW_SEC);
         } else {
           // Execute Lua script for atomic increment
           let result: unknown;
@@ -210,7 +223,7 @@ class AccountLockoutService {
               2,
               usernameKey,
               ipKey,
-              LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC.toString()
+              lockoutCfg.ATTEMPT_WINDOW_SEC.toString()
             );
           } else {
             // Fallback to EVAL if script not preloaded
@@ -220,7 +233,7 @@ class AccountLockoutService {
               2,
               usernameKey,
               ipKey,
-              LOCKOUT_CONFIG.ATTEMPT_WINDOW_SEC.toString()
+              lockoutCfg.ATTEMPT_WINDOW_SEC.toString()
             );
           }
 
@@ -257,7 +270,7 @@ class AccountLockoutService {
         'Failed login attempt recorded'
       );
 
-      if (maxAttempts >= LOCKOUT_CONFIG.MAX_ATTEMPTS) {
+      if (maxAttempts >= lockoutCfg.MAX_ATTEMPTS) {
         return await this.triggerLockout(email, ip, maxAttempts);
       }
 
@@ -268,13 +281,8 @@ class AccountLockoutService {
         lockoutExpiresAt: 0,
       };
     } catch (error) {
-      logger.error({ error, email, ip }, 'Failed to record failed attempt');
-      return {
-        isLocked: false,
-        remainingSeconds: 0,
-        attemptCount: 0,
-        lockoutExpiresAt: 0,
-      };
+      logger.error({ error, email, ip }, 'SECURITY: Failed to record attempt - denying request (fail-closed)');
+      throw new LockoutServiceError('recordFailedAttempt', error);
     }
   }
 
@@ -284,6 +292,7 @@ class AccountLockoutService {
     attemptCount: number
   ): Promise<LockoutInfo> {
     const cache = getCache();
+    const lockoutCfg = getLockoutConfig();
 
     try {
       const lockoutCountKey = LockoutKeys.lockoutCount(email);
@@ -292,13 +301,13 @@ class AccountLockoutService {
 
       let duration: number;
       if (lockoutCount === 0) {
-        duration = LOCKOUT_CONFIG.LOCKOUT_DURATIONS.FIRST;
+        duration = lockoutCfg.LOCKOUT_DURATIONS.FIRST;
       } else if (lockoutCount === 1) {
-        duration = LOCKOUT_CONFIG.LOCKOUT_DURATIONS.SECOND;
+        duration = lockoutCfg.LOCKOUT_DURATIONS.SECOND;
       } else if (lockoutCount === 2) {
-        duration = LOCKOUT_CONFIG.LOCKOUT_DURATIONS.THIRD;
+        duration = lockoutCfg.LOCKOUT_DURATIONS.THIRD;
       } else {
-        duration = LOCKOUT_CONFIG.LOCKOUT_DURATIONS.EXTENDED;
+        duration = lockoutCfg.LOCKOUT_DURATIONS.EXTENDED;
       }
 
       const expiresAt = Date.now() + duration * 1000;
@@ -326,13 +335,8 @@ class AccountLockoutService {
         lockoutExpiresAt: expiresAt,
       };
     } catch (error) {
-      logger.error({ error, email, ip }, 'Failed to trigger lockout');
-      return {
-        isLocked: false,
-        remainingSeconds: 0,
-        attemptCount,
-        lockoutExpiresAt: 0,
-      };
+      logger.error({ error, email, ip }, 'SECURITY: Failed to trigger lockout - denying request (fail-closed)');
+      throw new LockoutServiceError('triggerLockout', error);
     }
   }
 

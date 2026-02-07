@@ -130,7 +130,7 @@ describe('Admin Routes Integration Tests', () => {
       expect(response.body.message).toContain('Authentication required');
     });
 
-    it('returns 403 when user email not in ADMIN_EMAILS', async () => {
+    it('returns 403 when user role is not admin and email not in ADMIN_EMAILS', async () => {
       const response = await asRegularUser(
         request(app).post('/api/v1/admin/unlock-account')
       ).send({ email: 'test@example.com' });
@@ -141,11 +141,39 @@ describe('Admin Routes Integration Tests', () => {
       expect(response.body.message).toContain('Admin access required');
     });
 
-    it('allows access when email matches (case-insensitive)', async () => {
-      // Mock service to not throw
+    // --- RBAC: Primary role-based access ---
+
+    it('allows access when user has admin role (primary RBAC check)', async () => {
       vi.mocked(accountLockoutService.adminUnlock).mockResolvedValue(true);
 
-      // Test with uppercase email
+      const response = await asAdmin(
+        request(app).post('/api/v1/admin/unlock-account')
+      ).send({ email: 'test@example.com' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('success', true);
+    });
+
+    it('allows admin role access even when ADMIN_EMAILS is empty', async () => {
+      process.env.ADMIN_EMAILS = '';
+      app = createTestApp();
+
+      vi.mocked(accountLockoutService.adminUnlock).mockResolvedValue(true);
+
+      const response = await asAdmin(
+        request(app).post('/api/v1/admin/unlock-account')
+      ).send({ email: 'test@example.com' });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('success', true);
+    });
+
+    // --- Legacy ADMIN_EMAILS fallback ---
+
+    it('allows access via legacy ADMIN_EMAILS fallback (case-insensitive)', async () => {
+      vi.mocked(accountLockoutService.adminUnlock).mockResolvedValue(true);
+
+      // User has role='user' but email is in ADMIN_EMAILS
       const response = await asUserWithEmail(
         request(app).post('/api/v1/admin/unlock-account'),
         'ADMIN@EXAMPLE.COM'
@@ -155,11 +183,9 @@ describe('Admin Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('success', true);
     });
 
-    it('allows access with multiple comma-separated admin emails', async () => {
-      // Mock service to not throw
+    it('allows access via legacy ADMIN_EMAILS with multiple emails', async () => {
       vi.mocked(accountLockoutService.adminUnlock).mockResolvedValue(false);
 
-      // Test with second admin email
       const response = await asUserWithEmail(
         request(app).post('/api/v1/admin/unlock-account'),
         'superadmin@example.com'
@@ -169,19 +195,33 @@ describe('Admin Routes Integration Tests', () => {
       expect(response.body).toHaveProperty('success', true);
     });
 
-    it('handles empty ADMIN_EMAILS gracefully (403 for all)', async () => {
-      // Clear admin emails
-      process.env.ADMIN_EMAILS = '';
-      app = createTestApp(); // Recreate app to pick up env change
+    it('logs deprecation notice for ADMIN_EMAILS fallback access', async () => {
+      vi.mocked(accountLockoutService.adminUnlock).mockResolvedValue(true);
 
-      const response = await asAdmin(
+      await asUserWithEmail(
+        request(app).post('/api/v1/admin/unlock-account'),
+        'admin@example.com'
+      ).send({ email: 'test@example.com' });
+
+      expect(vi.mocked(logger.info)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 'user-test',
+          email: 'admin@example.com',
+        }),
+        expect.stringContaining('DEPRECATION: Admin access granted via ADMIN_EMAILS')
+      );
+    });
+
+    it('returns 403 for non-admin role when ADMIN_EMAILS is empty', async () => {
+      process.env.ADMIN_EMAILS = '';
+      app = createTestApp();
+
+      const response = await asRegularUser(
         request(app).post('/api/v1/admin/unlock-account')
       ).send({ email: 'test@example.com' });
 
       expect(response.status).toBe(403);
       expect(response.body).toHaveProperty('code', 'FORBIDDEN');
-      expect(response.body).toHaveProperty('message');
-      expect(response.body.message).toContain('Admin access required');
     });
 
     it('logs security warning on unauthorized access attempt', async () => {

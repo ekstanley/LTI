@@ -79,6 +79,7 @@ const mockUser = {
   lastFailedLoginAt: null,
   accountLockedUntil: null,
   rateLimit: 100,
+  role: 'USER' as const,
   createdAt: new Date('2026-01-01T00:00:00Z'),
   updatedAt: new Date('2026-01-01T00:00:00Z'),
 };
@@ -103,6 +104,7 @@ describe('authService', () => {
         id: 'new-user-id',
         email: 'newuser@example.com',
         name: 'New User',
+        role: 'USER',
       } as any);
       vi.mocked(jwtService.generateTokenPair).mockResolvedValue(mockTokenPair);
 
@@ -114,6 +116,7 @@ describe('authService', () => {
           id: 'new-user-id',
           email: 'newuser@example.com',
           name: 'New User',
+          role: 'user',
         },
         tokens: mockTokenPair,
       });
@@ -173,6 +176,7 @@ describe('authService', () => {
         id: 'new-user-id',
         email: 'newuser@example.com',
         name: 'New User',
+        role: 'USER',
       } as any);
       vi.mocked(jwtService.generateTokenPair).mockResolvedValue(mockTokenPair);
 
@@ -197,6 +201,7 @@ describe('authService', () => {
           id: true,
           email: true,
           name: true,
+          role: true,
         },
       });
     });
@@ -209,6 +214,7 @@ describe('authService', () => {
         id: 'new-user-id',
         email: 'newuser@example.com',
         name: 'New User',
+        role: 'USER',
       } as any);
       vi.mocked(jwtService.generateTokenPair).mockResolvedValue(mockTokenPair);
 
@@ -226,6 +232,7 @@ describe('authService', () => {
           id: true,
           email: true,
           name: true,
+          role: true,
         },
       });
     });
@@ -238,6 +245,7 @@ describe('authService', () => {
         id: 'new-user-id',
         email: 'newuser@example.com',
         name: 'New User',
+        role: 'USER',
       } as any);
       vi.mocked(jwtService.generateTokenPair).mockResolvedValue(mockTokenPair);
 
@@ -293,6 +301,7 @@ describe('authService', () => {
           name: 'Test User',
           avatarUrl: 'https://example.com/avatar.jpg',
           emailVerified: true,
+          role: 'user',
         },
         tokens: mockTokenPair,
       });
@@ -564,6 +573,25 @@ describe('authService', () => {
       });
       expect(logger.error).toHaveBeenCalledWith({ error: expect.any(Error) }, 'Login failed');
     });
+
+    it('should map ADMIN role to lowercase admin in login response', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        ...mockUser,
+        role: 'ADMIN' as const,
+      } as any);
+      vi.mocked(passwordService.verify).mockResolvedValue({
+        valid: true,
+        needsRehash: false,
+      });
+      vi.mocked(jwtService.generateTokenPair).mockResolvedValue(mockTokenPair);
+
+      const result = await authService.login(validInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.user.role).toBe('admin');
+      }
+    });
   });
 
   describe('refresh', () => {
@@ -724,6 +752,7 @@ describe('authService', () => {
         emailVerified: true,
         isActive: true,
         rateLimit: 100,
+        role: 'USER' as const,
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-01T00:00:00Z'),
       };
@@ -731,7 +760,7 @@ describe('authService', () => {
 
       const result = await authService.getProfile(userId);
 
-      expect(result).toEqual(profile);
+      expect(result).toEqual({ ...profile, role: 'user' });
       expect(prisma.user.findUnique).toHaveBeenCalledWith({
         where: { id: userId },
         select: {
@@ -742,6 +771,7 @@ describe('authService', () => {
           emailVerified: true,
           isActive: true,
           rateLimit: true,
+          role: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -773,6 +803,7 @@ describe('authService', () => {
         emailVerified: true,
         isActive: true,
         rateLimit: 100,
+        role: 'USER' as const,
         createdAt: new Date('2026-01-01T00:00:00Z'),
         updatedAt: new Date('2026-01-02T00:00:00Z'),
       };
@@ -780,11 +811,11 @@ describe('authService', () => {
 
       const result = await authService.updateProfile(userId, updateData);
 
-      expect(result).toEqual(updatedProfile);
+      expect(result).toEqual({ ...updatedProfile, role: 'user' });
     });
 
     it('should pass correct data to prisma.user.update', async () => {
-      vi.mocked(prisma.user.update).mockResolvedValue({} as any);
+      vi.mocked(prisma.user.update).mockResolvedValue({ role: 'USER' } as any);
 
       await authService.updateProfile(userId, updateData);
 
@@ -799,6 +830,7 @@ describe('authService', () => {
           emailVerified: true,
           isActive: true,
           rateLimit: true,
+          role: true,
           createdAt: true,
           updatedAt: true,
         },

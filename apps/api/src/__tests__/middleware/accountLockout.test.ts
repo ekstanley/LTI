@@ -674,7 +674,7 @@ describe('Account Lockout Middleware - Integration Tests', () => {
       expect(res.status).not.toHaveBeenCalled();
     });
 
-    it('should handle middleware errors gracefully (fail open)', async () => {
+    it('should block login when lockout check fails (fail-closed)', async () => {
       const email = 'error-test@example.com';
       const ip = '192.168.5.3';
 
@@ -687,14 +687,48 @@ describe('Account Lockout Middleware - Integration Tests', () => {
       const res = createMockResponse();
       const next = vi.fn();
 
-      // Middleware should fail open (allow request to proceed)
+      // Middleware should fail closed (block request with 503)
       await accountLockout(req, res, next);
 
-      expect(next).toHaveBeenCalled();
-      expect(res.status).not.toHaveBeenCalled();
+      expect(next).not.toHaveBeenCalled();
+      expect(getStatusCode(res)).toBe(503);
+      expect(getJsonData(res)).toEqual({
+        error: 'service_unavailable',
+        message: 'Authentication service temporarily unavailable. Please try again later.',
+      });
 
       // Restore original function
       vi.spyOn(accountLockoutService, 'checkLockout').mockRestore();
+    });
+
+    it('should throw when tracking failed login attempt and Redis fails (fail-closed)', async () => {
+      const email = 'track-fail@example.com';
+      const ip = '192.168.5.6';
+
+      // Mock recordFailedAttempt to throw
+      vi.spyOn(accountLockoutService, 'recordFailedAttempt').mockRejectedValueOnce(
+        new Error('Redis connection refused')
+      );
+
+      // Failed login + Redis error = must throw (fail-closed)
+      await expect(trackLoginAttempt(email, ip, false)).rejects.toThrow('Redis connection refused');
+
+      vi.spyOn(accountLockoutService, 'recordFailedAttempt').mockRestore();
+    });
+
+    it('should NOT throw when tracking successful login and Redis fails (non-critical)', async () => {
+      const email = 'track-success@example.com';
+      const ip = '192.168.5.7';
+
+      // Mock resetLockout to throw
+      vi.spyOn(accountLockoutService, 'resetLockout').mockRejectedValueOnce(
+        new Error('Redis connection refused')
+      );
+
+      // Successful login + Redis error = should NOT throw
+      await expect(trackLoginAttempt(email, ip, true)).resolves.toBeUndefined();
+
+      vi.spyOn(accountLockoutService, 'resetLockout').mockRestore();
     });
 
     it('should include correct Retry-After header in lockout response', async () => {

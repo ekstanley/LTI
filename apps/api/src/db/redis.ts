@@ -38,30 +38,80 @@ export const DEFAULT_TTL = {
 } as const;
 
 /**
- * In-memory cache fallback when Redis is not available.
- * Used for development and testing without Redis.
+ * Cache metrics for monitoring and diagnostics.
+ */
+export interface CacheMetrics {
+  /** Current number of entries in the cache */
+  size: number;
+  /** Maximum entries allowed before LRU eviction */
+  maxEntries: number;
+  /** Total cache hits */
+  hits: number;
+  /** Total cache misses */
+  misses: number;
+  /** Total LRU evictions */
+  evictions: number;
+}
+
+/**
+ * Bounded in-memory LRU cache fallback when Redis is not available.
+ *
+ * Uses Map insertion-order preservation for O(1) LRU eviction:
+ * - get() promotes entries by delete + re-insert (moves to end)
+ * - set() evicts from the front (oldest access) when at capacity
+ * - Periodic cleanup removes expired entries every 60 seconds
+ *
+ * Memory budget: maxEntries * avg_value_size (e.g., 10K * 5KB = ~50MB)
  */
 class MemoryCache {
   private cache = new Map<string, { value: string; expiresAt: number }>();
   private cleanupInterval: NodeJS.Timeout | null = null;
+  private readonly maxEntries: number;
+  private metrics = { hits: 0, misses: 0, evictions: 0 };
 
-  constructor() {
+  constructor(maxEntries: number = 10_000) {
+    this.maxEntries = maxEntries;
     // Cleanup expired entries every minute
     this.cleanupInterval = setInterval(() => this.cleanup(), 60_000);
   }
 
   get(key: string): Promise<string | null> {
     const entry = this.cache.get(key);
-    if (!entry) return Promise.resolve(null);
-    if (Date.now() > entry.expiresAt) {
-      this.cache.delete(key);
+    if (!entry) {
+      this.metrics.misses++;
       return Promise.resolve(null);
     }
+    if (Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      this.metrics.misses++;
+      return Promise.resolve(null);
+    }
+    // Promote to most-recently-used: delete + re-insert refreshes Map order
+    this.cache.delete(key);
+    this.cache.set(key, entry);
+    this.metrics.hits++;
     return Promise.resolve(entry.value);
   }
 
   set(key: string, value: string, ttlSeconds?: number): Promise<void> {
     const expiresAt = Date.now() + (ttlSeconds ?? DEFAULT_TTL.CACHE) * 1000;
+
+    // If key exists, delete first to refresh insertion order
+    if (this.cache.has(key)) {
+      this.cache.delete(key);
+    }
+
+    // Evict LRU entries (front of Map) if at capacity
+    while (this.cache.size >= this.maxEntries) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+        this.metrics.evictions++;
+      } else {
+        break;
+      }
+    }
+
     this.cache.set(key, { value, expiresAt });
     return Promise.resolve();
   }
@@ -81,6 +131,14 @@ class MemoryCache {
   flushAll(): Promise<void> {
     this.cache.clear();
     return Promise.resolve();
+  }
+
+  getMetrics(): CacheMetrics {
+    return {
+      size: this.cache.size,
+      maxEntries: this.maxEntries,
+      ...this.metrics,
+    };
   }
 
   private cleanup(): void {
@@ -111,13 +169,15 @@ class RedisCache {
 
   constructor(url: string) {
     this.client = new Redis(url, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
       retryStrategy: (times: number): number | null => {
-        if (times > 10) {
-          logger.error('Redis connection failed after 10 retries');
+        if (times > config.redis.retryMaxAttempts) {
+          logger.error(
+            `Redis connection failed after ${config.redis.retryMaxAttempts} retries`
+          );
           return null; // Stop retrying
         }
-        const delay = Math.min(times * 100, 3000);
+        const delay = Math.min(times * 100, config.redis.retryMaxDelayMs);
         return delay;
       },
       lazyConnect: true,
@@ -174,6 +234,7 @@ class RedisCache {
   }
 
   disconnect(): void {
+    this.client.removeAllListeners();
     this.client.disconnect();
     this.isConnected = false;
   }
@@ -220,6 +281,8 @@ interface CacheClient {
   keys(pattern: string): Promise<string[]>;
   flushAll(): Promise<void>;
   disconnect(): void;
+  /** Cache metrics for monitoring (MemoryCache only) */
+  getMetrics?(): CacheMetrics;
   // Lua script support for atomic operations
   scriptLoad?(script: string): Promise<string>;
   evalsha?(sha: string, numKeys: number, ...args: string[]): Promise<unknown>;
@@ -239,9 +302,9 @@ export async function initializeCache(): Promise<void> {
   if (cacheClient) return;
 
   // Try Redis if URL is configured
-  if (config.redisUrl) {
+  if (config.redis.url) {
     try {
-      redisInstance = new RedisCache(config.redisUrl);
+      redisInstance = new RedisCache(config.redis.url);
       const connected = await redisInstance.connect();
       if (connected) {
         cacheClient = redisInstance;
@@ -256,7 +319,7 @@ export async function initializeCache(): Promise<void> {
 
   // Fallback to memory cache
   logger.info('Using in-memory cache (Redis not available)');
-  cacheClient = new MemoryCache();
+  cacheClient = new MemoryCache(config.cache.maxEntries);
   cacheType = 'memory';
 }
 
@@ -269,7 +332,7 @@ export function getCache(): CacheClient {
 
   // Synchronous fallback - memory cache only (for code that doesn't await init)
   logger.info('Using in-memory cache (call initializeCache() for Redis support)');
-  cacheClient = new MemoryCache();
+  cacheClient = new MemoryCache(config.cache.maxEntries);
   cacheType = 'memory';
 
   return cacheClient;
@@ -362,6 +425,13 @@ export function disconnectCache(): void {
     cacheClient = null;
     logger.info('Cache disconnected');
   }
+}
+
+/**
+ * Get cache metrics (available when using MemoryCache fallback)
+ */
+export function getCacheMetrics(): CacheMetrics | null {
+  return cacheClient?.getMetrics?.() ?? null;
 }
 
 /**

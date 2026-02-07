@@ -11,6 +11,17 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/ltip_dev'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
+  REDIS_MAX_RETRIES_PER_REQUEST: z.coerce.number().min(0).default(3),
+  REDIS_RETRY_MAX_ATTEMPTS: z.coerce.number().min(1).default(10),
+  REDIS_RETRY_MAX_DELAY_MS: z.coerce.number().min(100).default(3000),
+
+  // Account lockout configuration (CWE-307 protection)
+  LOCKOUT_MAX_ATTEMPTS: z.coerce.number().min(1).default(5),
+  LOCKOUT_WINDOW_SECONDS: z.coerce.number().min(1).default(900),
+  LOCKOUT_DURATION_FIRST: z.coerce.number().min(1).default(900),
+  LOCKOUT_DURATION_SECOND: z.coerce.number().min(1).default(3600),
+  LOCKOUT_DURATION_THIRD: z.coerce.number().min(1).default(21600),
+  LOCKOUT_DURATION_EXTENDED: z.coerce.number().min(1).default(86400),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
@@ -44,10 +55,17 @@ const envSchema = z.object({
   CONGRESS_API_BASE_URL: z.string().default('https://api.congress.gov/v3'),
   CONGRESS_API_RATE_LIMIT: z.coerce.number().default(1000), // requests per hour
   CONGRESS_SYNC_INTERVAL_MS: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
+
+  // Memory cache configuration (fallback when Redis unavailable)
+  MEMORY_CACHE_MAX_ENTRIES: z.coerce.number().min(100).default(10_000),
+
   // GovInfo API configuration (bill text in XML/PDF/HTML)
   GOVINFO_API_KEY: z.string().optional(),
   GOVINFO_API_BASE_URL: z.string().default('https://api.govinfo.gov'),
 });
+
+/** @internal Exported for testing config validation rules */
+export { envSchema as _envSchema };
 
 const env = envSchema.parse(process.env);
 
@@ -70,7 +88,22 @@ export const config = {
   isTest: env.NODE_ENV === 'test',
   port: env.PORT,
   databaseUrl: env.DATABASE_URL,
-  redisUrl: env.REDIS_URL,
+  redis: {
+    url: env.REDIS_URL,
+    maxRetriesPerRequest: env.REDIS_MAX_RETRIES_PER_REQUEST,
+    retryMaxAttempts: env.REDIS_RETRY_MAX_ATTEMPTS,
+    retryMaxDelayMs: env.REDIS_RETRY_MAX_DELAY_MS,
+  },
+  lockout: {
+    maxAttempts: env.LOCKOUT_MAX_ATTEMPTS,
+    windowSeconds: env.LOCKOUT_WINDOW_SECONDS,
+    durations: {
+      first: env.LOCKOUT_DURATION_FIRST,
+      second: env.LOCKOUT_DURATION_SECOND,
+      third: env.LOCKOUT_DURATION_THIRD,
+      extended: env.LOCKOUT_DURATION_EXTENDED,
+    },
+  },
   corsOrigins: env.CORS_ORIGINS.split(',').map((origin) => origin.trim()),
   logLevel: env.LOG_LEVEL,
   rateLimit: {
@@ -119,6 +152,10 @@ export const config = {
     memoryCost: 65536, // 64 MB
     timeCost: 3, // 3 iterations
     parallelism: 4, // 4 parallel threads
+  },
+
+  cache: {
+    maxEntries: env.MEMORY_CACHE_MAX_ENTRIES,
   },
 
   congress: {

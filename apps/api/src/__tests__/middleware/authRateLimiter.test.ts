@@ -346,7 +346,8 @@ describe('authRateLimiter', () => {
         ...mockReq,
         headers: {},
         ip: undefined,
-      } as Request;
+        socket: { remoteAddress: undefined },
+      } as unknown as Request;
       const res = {
         setHeader: vi.fn(),
         json: vi.fn(),

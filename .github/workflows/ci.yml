@@ -30,20 +30,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Debug ESLint Configuration
-        run: |
-          echo "=== API ESLint Config ==="
-          cat apps/api/.eslintrc.json
-          echo ""
-          echo "=== ESLint Version ==="
-          pnpm --filter=@ltip/api exec eslint --version
-          echo ""
-          echo "=== TypeScript ESLint Parser Version ==="
-          pnpm --filter=@ltip/api list @typescript-eslint/parser
-          echo ""
-          echo "=== Node Modules ESLint Config (if exists) ==="
-          ls -la node_modules/.eslintrc* 2>/dev/null || echo "No .eslintrc in node_modules"
-          echo ""
+      - name: Generate Prisma Client
+        run: pnpm --filter @ltip/api db:generate
+
+      - name: Build shared packages
+        run: pnpm --filter @ltip/shared build
 
       - name: Run ESLint
         run: pnpm lint
@@ -137,6 +128,11 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ltip_test
+      REDIS_URL: redis://localhost:6379
+      NODE_ENV: test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -152,12 +148,14 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm --filter @ltip/api db:generate
 
+      - name: Push database schema
+        run: pnpm --filter @ltip/api db:push
+
+      - name: Build shared packages
+        run: pnpm --filter @ltip/shared build
+
       - name: Run tests
         run: pnpm test
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/ltip_test
-          REDIS_URL: redis://localhost:6379
-          NODE_ENV: test
 
   docker-build:
     name: Docker Build

@@ -29,8 +29,16 @@ describe('Account Lockout Protection (CWE-307)', () => {
   beforeEach(async () => {
     // Create test user with valid password hash
     const passwordHash = await passwordService.hash(validPassword);
-    const user = await prisma.user.create({
-      data: {
+    const user = await prisma.user.upsert({
+      where: { email: testEmail },
+      update: {
+        passwordHash,
+        failedLoginAttempts: 0,
+        lastFailedLoginAt: null,
+        accountLockedUntil: null,
+        isActive: true,
+      },
+      create: {
         email: testEmail,
         passwordHash,
         name: 'Lockout Test User',

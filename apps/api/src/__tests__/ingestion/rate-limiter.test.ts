@@ -210,6 +210,46 @@ describe('TokenBucketRateLimiter', () => {
     });
   });
 
+  describe('timer cleanup', () => {
+    it('should have no orphaned timers after reset', async () => {
+      const limiter = new TokenBucketRateLimiter({
+        maxTokens: 1,
+        refillRatePerHour: 3600,
+        initialTokens: 0,
+      });
+
+      // Queue multiple requests
+      const p1 = limiter.acquire(60000).catch(() => {});
+      const p2 = limiter.acquire(60000).catch(() => {});
+
+      // Reset clears all timers (both request.timeout and request.processTimeout)
+      limiter.reset();
+      await p1;
+      await p2;
+
+      // All timers should be cleared — vi.getTimerCount() counts pending timers
+      expect(vi.getTimerCount()).toBe(0);
+    });
+
+    it('should clear processTimeout when request resolves via processQueue', async () => {
+      const limiter = new TokenBucketRateLimiter({
+        maxTokens: 10,
+        refillRatePerHour: 36000000, // Fast refill
+        initialTokens: 0,
+      });
+
+      const acquirePromise = limiter.acquire(5000);
+
+      // Advance time to refill tokens and trigger processQueue
+      vi.advanceTimersByTime(1000);
+
+      await acquirePromise;
+
+      // No orphaned timers after resolution
+      expect(vi.getTimerCount()).toBe(0);
+    });
+  });
+
   describe('getStats', () => {
     it('returns correct statistics', () => {
       const limiter = new TokenBucketRateLimiter({

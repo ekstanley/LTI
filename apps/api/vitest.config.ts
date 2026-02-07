@@ -4,6 +4,9 @@ export default defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    // Sequential file execution prevents shared-state interference
+    // (e.g., Redis lockout keys cleared in beforeEach across multiple files)
+    fileParallelism: false,
     include: ['src/**/*.test.ts', 'src/__tests__/**/*.test.ts'],
     exclude: ['node_modules', 'dist', 'src/__tests__/setup.ts'],
     setupFiles: ['src/__tests__/setup.ts'],

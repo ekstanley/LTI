@@ -5,8 +5,10 @@
  * Combines password service, JWT service, and Prisma operations.
  */
 
+import { config } from '../config.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
+import { mapPrismaRole, type ApiRole } from '../utils/roles.js';
 
 import { jwtService, type TokenPair } from './jwt.service.js';
 import { passwordService } from './password.service.js';
@@ -39,6 +41,7 @@ export interface RegisterResult {
     id: string;
     email: string;
     name: string | null;
+    role: ApiRole;
   };
   tokens: TokenPair;
 }
@@ -62,6 +65,7 @@ export interface LoginResult {
     name: string | null;
     avatarUrl: string | null;
     emailVerified: boolean;
+    role: ApiRole;
   };
   tokens: TokenPair;
 }
@@ -138,6 +142,7 @@ export const authService = {
           id: true,
           email: true,
           name: true,
+          role: true,
         },
       });
 
@@ -148,7 +153,10 @@ export const authService = {
 
       return {
         success: true,
-        user,
+        user: {
+          ...user,
+          role: mapPrismaRole(user.role),
+        },
         tokens,
       };
     } catch (error) {
@@ -179,6 +187,7 @@ export const authService = {
           failedLoginAttempts: true,
           lastFailedLoginAt: true,
           accountLockedUntil: true,
+          role: true,
         },
       });
 
@@ -229,12 +238,11 @@ export const authService = {
         });
 
         const failedAttempts = updatedUser.failedLoginAttempts;
-        const MAX_FAILED_ATTEMPTS = 5;
-        const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
 
         // Lock account if threshold exceeded after atomic increment
-        if (failedAttempts >= MAX_FAILED_ATTEMPTS) {
-          const lockoutUntil = new Date(now.getTime() + LOCKOUT_DURATION_MS);
+        if (failedAttempts >= config.lockout.maxAttempts) {
+          const lockoutDurationMs = config.lockout.durations.first * 1000;
+          const lockoutUntil = new Date(now.getTime() + lockoutDurationMs);
           await prisma.user.update({
             where: { id: user.id },
             data: {
@@ -293,6 +301,7 @@ export const authService = {
           name: user.name,
           avatarUrl: user.avatarUrl,
           emailVerified: user.emailVerified,
+          role: mapPrismaRole(user.role),
         },
         tokens,
       };
@@ -386,7 +395,7 @@ export const authService = {
    * @returns User profile or null
    */
   async getProfile(userId: string) {
-    return prisma.user.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: userId },
       select: {
         id: true,
@@ -396,10 +405,18 @@ export const authService = {
         emailVerified: true,
         isActive: true,
         rateLimit: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    if (!user) return null;
+
+    return {
+      ...user,
+      role: mapPrismaRole(user.role),
+    };
   },
 
   /**
@@ -413,7 +430,7 @@ export const authService = {
     userId: string,
     data: { name?: string; avatarUrl?: string | null }
   ) {
-    return prisma.user.update({
+    const user = await prisma.user.update({
       where: { id: userId },
       data,
       select: {
@@ -424,10 +441,16 @@ export const authService = {
         emailVerified: true,
         isActive: true,
         rateLimit: true,
+        role: true,
         createdAt: true,
         updatedAt: true,
       },
     });
+
+    return {
+      ...user,
+      role: mapPrismaRole(user.role),
+    };
   },
 
   /**
