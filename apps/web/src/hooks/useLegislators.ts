@@ -4,7 +4,7 @@
  */
 
 import type { AsyncState, Legislator, PaginatedResponse, Pagination } from '@ltip/shared';
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import useSWR from 'swr';
 
 import { swrConfig } from '@/config/env';
@@ -58,12 +58,18 @@ export function useLegislators(options: UseLegislatorsOptions = {}): UseLegislat
   // Build stable cache key from params (prevents cache collisions)
   const key = enabled ? createStableCacheKey('legislators', params) : null;
 
-  // Wrap fetcher with retry logic
+  // Ref holds latest params so the fetcher identity stays stable across renders.
+  // SWR triggers refetch via key change, not fetcher identity change.
+  const paramsRef = useRef(params);
+  paramsRef.current = params;
+
+  // Wrap fetcher with retry logic (stable identity: trackRetry deps are constants)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const fetcher = useCallback(
     async (_key: string | null, { signal }: { signal?: AbortSignal } = {}) => {
-      return trackRetry(() => getLegislators(params, signal), signal);
+      return trackRetry(() => getLegislators(paramsRef.current, signal), signal);
     },
-    [params, trackRetry]
+    [trackRetry]
   );
 
   const { data, error, isLoading, isValidating, mutate } = useSWR<
