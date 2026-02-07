@@ -11,17 +11,17 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(4000),
   DATABASE_URL: z.string().default('postgresql://postgres:postgres@localhost:5432/ltip_dev'),
   REDIS_URL: z.string().default('redis://localhost:6379'),
-  REDIS_MAX_RETRIES_PER_REQUEST: z.coerce.number().default(3),
-  REDIS_RETRY_MAX_ATTEMPTS: z.coerce.number().default(10),
-  REDIS_RETRY_MAX_DELAY_MS: z.coerce.number().default(3000),
+  REDIS_MAX_RETRIES_PER_REQUEST: z.coerce.number().min(0).default(3),
+  REDIS_RETRY_MAX_ATTEMPTS: z.coerce.number().min(1).default(10),
+  REDIS_RETRY_MAX_DELAY_MS: z.coerce.number().min(100).default(3000),
 
   // Account lockout configuration (CWE-307 protection)
-  LOCKOUT_MAX_ATTEMPTS: z.coerce.number().default(5),
-  LOCKOUT_WINDOW_SECONDS: z.coerce.number().default(900),
-  LOCKOUT_DURATION_FIRST: z.coerce.number().default(900),
-  LOCKOUT_DURATION_SECOND: z.coerce.number().default(3600),
-  LOCKOUT_DURATION_THIRD: z.coerce.number().default(21600),
-  LOCKOUT_DURATION_EXTENDED: z.coerce.number().default(86400),
+  LOCKOUT_MAX_ATTEMPTS: z.coerce.number().min(1).default(5),
+  LOCKOUT_WINDOW_SECONDS: z.coerce.number().min(1).default(900),
+  LOCKOUT_DURATION_FIRST: z.coerce.number().min(1).default(900),
+  LOCKOUT_DURATION_SECOND: z.coerce.number().min(1).default(3600),
+  LOCKOUT_DURATION_THIRD: z.coerce.number().min(1).default(21600),
+  LOCKOUT_DURATION_EXTENDED: z.coerce.number().min(1).default(86400),
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60_000),
@@ -59,6 +59,9 @@ const envSchema = z.object({
   GOVINFO_API_KEY: z.string().optional(),
   GOVINFO_API_BASE_URL: z.string().default('https://api.govinfo.gov'),
 });
+
+/** @internal Exported for testing config validation rules */
+export { envSchema as _envSchema };
 
 const env = envSchema.parse(process.env);
 
