@@ -9,8 +9,9 @@
  * security controls by spoofing the x-forwarded-for header.
  */
 
-import type { Request } from 'express';
 import { isIP } from 'net';
+
+import type { Request } from 'express';
 
 /**
  * Validate an IP address string.
