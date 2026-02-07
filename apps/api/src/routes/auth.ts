@@ -24,6 +24,7 @@ import {
 } from '../schemas/auth.schema.js';
 import { authService } from '../services/auth.service.js';
 import { oauthService } from '../services/oauth.service.js';
+import { getClientIP } from '../utils/ip.js';
 
 export const authRouter: RouterType = Router();
 
@@ -58,8 +59,8 @@ function getClientMetadata(req: Request): { userAgent?: string; ipAddress?: stri
     result.userAgent = userAgent;
   }
 
-  const ipAddress = req.ip ?? req.socket.remoteAddress;
-  if (ipAddress) {
+  const ipAddress = getClientIP(req);
+  if (ipAddress !== 'unknown') {
     result.ipAddress = ipAddress;
   }
 

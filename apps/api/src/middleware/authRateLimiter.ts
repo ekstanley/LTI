@@ -14,6 +14,7 @@
 import rateLimit, { type Store } from 'express-rate-limit';
 
 import { logger } from '../lib/logger.js';
+import { getClientIP } from '../utils/ip.js';
 
 /**
  * Factory: creates auth-specific rate limiter with stricter limits.
@@ -51,13 +52,7 @@ export function createAuthRateLimiter(store?: Store) {
     skip: (req) => {
       return req.path === '/api/health';
     },
-    keyGenerator: (req) => {
-      const forwardedFor = req.headers['x-forwarded-for'];
-      if (typeof forwardedFor === 'string') {
-        return forwardedFor.split(',')[0]?.trim() ?? req.ip ?? 'unknown';
-      }
-      return req.ip ?? 'unknown';
-    },
+    keyGenerator: (req) => getClientIP(req),
     ...(store ? { store } : {}),
   });
 }
