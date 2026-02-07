@@ -5,9 +5,8 @@
  * @module hooks/useRetry
  */
 
-import { useCallback, useRef, useState, useEffect } from 'react';
-
 import { sleep } from '@ltip/shared';
+import { useCallback, useRef, useState, useEffect } from 'react';
 
 import { apiConfig } from '@/config/env';
 import { isApiError, isNetworkError, isAbortError } from '@/lib/api';
