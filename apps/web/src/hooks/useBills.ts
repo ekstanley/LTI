@@ -3,7 +3,7 @@
  * @module hooks/useBills
  */
 
-import type { Bill, PaginatedResponse, Pagination } from '@ltip/shared';
+import type { AsyncState, Bill, PaginatedResponse, Pagination } from '@ltip/shared';
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
@@ -25,6 +25,7 @@ export interface UseBillsResult {
   isValidating: boolean;
   error: Error | null;
   retryState: RetryState;
+  state: AsyncState<PaginatedResponse<Bill>>;
   mutate: () => Promise<PaginatedResponse<Bill> | undefined>;
 }
 
@@ -73,6 +74,14 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
     shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
   });
 
+  // Derive discriminated union state for exhaustive pattern matching
+  const state: AsyncState<PaginatedResponse<Bill>> = (() => {
+    if (error) return { status: 'error' as const, error };
+    if (isLoading) return { status: 'loading' as const };
+    if (data) return { status: 'success' as const, data };
+    return { status: 'idle' as const };
+  })();
+
   return {
     bills: data?.data ?? [],
     pagination: data?.pagination ?? null,
@@ -80,6 +89,7 @@ export function useBills(options: UseBillsOptions = {}): UseBillsResult {
     isValidating,
     error: error ?? null,
     retryState,
+    state,
     mutate,
   };
 }

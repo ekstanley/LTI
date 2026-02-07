@@ -3,7 +3,7 @@
  * @module hooks/useLegislators
  */
 
-import type { Legislator, PaginatedResponse, Pagination } from '@ltip/shared';
+import type { AsyncState, Legislator, PaginatedResponse, Pagination } from '@ltip/shared';
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
@@ -25,6 +25,7 @@ export interface UseLegislatorsResult {
   isValidating: boolean;
   error: Error | null;
   retryState: RetryState;
+  state: AsyncState<PaginatedResponse<Legislator>>;
   mutate: () => Promise<PaginatedResponse<Legislator> | undefined>;
 }
 
@@ -74,6 +75,14 @@ export function useLegislators(options: UseLegislatorsOptions = {}): UseLegislat
     shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
   });
 
+  // Derive discriminated union state for exhaustive pattern matching
+  const state: AsyncState<PaginatedResponse<Legislator>> = (() => {
+    if (error) return { status: 'error' as const, error };
+    if (isLoading) return { status: 'loading' as const };
+    if (data) return { status: 'success' as const, data };
+    return { status: 'idle' as const };
+  })();
+
   return {
     legislators: data?.data ?? [],
     pagination: data?.pagination ?? null,
@@ -81,6 +90,7 @@ export function useLegislators(options: UseLegislatorsOptions = {}): UseLegislat
     isValidating,
     error: error ?? null,
     retryState,
+    state,
     mutate,
   };
 }

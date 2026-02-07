@@ -231,6 +231,30 @@ export interface BillStatusChangeEvent {
 export type WebSocketEvent = VoteUpdateEvent | TallyUpdateEvent | BillStatusChangeEvent;
 
 // ============================================================================
+// Async State Types
+// ============================================================================
+
+/**
+ * Discriminated union for async data state.
+ * Enables exhaustive pattern matching at call sites.
+ *
+ * @example
+ * ```tsx
+ * switch (state.status) {
+ *   case 'idle': return null;
+ *   case 'loading': return <Spinner />;
+ *   case 'error': return <ErrorBanner error={state.error} />;
+ *   case 'success': return <DataTable data={state.data} />;
+ * }
+ * ```
+ */
+export type AsyncState<T> =
+  | { status: 'idle' }
+  | { status: 'loading' }
+  | { status: 'error'; error: Error }
+  | { status: 'success'; data: T };
+
+// ============================================================================
 // Authentication Types
 // ============================================================================
 

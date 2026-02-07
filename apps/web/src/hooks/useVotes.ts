@@ -3,7 +3,7 @@
  * @module hooks/useVotes
  */
 
-import type { Vote, PaginatedResponse, Pagination } from '@ltip/shared';
+import type { AsyncState, Vote, PaginatedResponse, Pagination } from '@ltip/shared';
 import { useCallback } from 'react';
 import useSWR from 'swr';
 
@@ -25,6 +25,7 @@ export interface UseVotesResult {
   isValidating: boolean;
   error: Error | null;
   retryState: RetryState;
+  state: AsyncState<PaginatedResponse<Vote>>;
   mutate: () => Promise<PaginatedResponse<Vote> | undefined>;
 }
 
@@ -73,6 +74,14 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
     shouldRetryOnError: false, // Disable SWR retry - use trackRetry instead
   });
 
+  // Derive discriminated union state for exhaustive pattern matching
+  const state: AsyncState<PaginatedResponse<Vote>> = (() => {
+    if (error) return { status: 'error' as const, error };
+    if (isLoading) return { status: 'loading' as const };
+    if (data) return { status: 'success' as const, data };
+    return { status: 'idle' as const };
+  })();
+
   return {
     votes: data?.data ?? [],
     pagination: data?.pagination ?? null,
@@ -80,6 +89,7 @@ export function useVotes(options: UseVotesOptions = {}): UseVotesResult {
     isValidating,
     error: error ?? null,
     retryState,
+    state,
     mutate,
   };
 }
