@@ -111,13 +111,15 @@ class RedisCache {
 
   constructor(url: string) {
     this.client = new Redis(url, {
-      maxRetriesPerRequest: 3,
+      maxRetriesPerRequest: config.redis.maxRetriesPerRequest,
       retryStrategy: (times: number): number | null => {
-        if (times > 10) {
-          logger.error('Redis connection failed after 10 retries');
+        if (times > config.redis.retryMaxAttempts) {
+          logger.error(
+            `Redis connection failed after ${config.redis.retryMaxAttempts} retries`
+          );
           return null; // Stop retrying
         }
-        const delay = Math.min(times * 100, 3000);
+        const delay = Math.min(times * 100, config.redis.retryMaxDelayMs);
         return delay;
       },
       lazyConnect: true,
@@ -239,9 +241,9 @@ export async function initializeCache(): Promise<void> {
   if (cacheClient) return;
 
   // Try Redis if URL is configured
-  if (config.redisUrl) {
+  if (config.redis.url) {
     try {
-      redisInstance = new RedisCache(config.redisUrl);
+      redisInstance = new RedisCache(config.redis.url);
       const connected = await redisInstance.connect();
       if (connected) {
         cacheClient = redisInstance;
