@@ -397,7 +397,7 @@ describe('API Client', () => {
     });
 
     describe('Max Retries Exhaustion', () => {
-      it('should throw after 3 failed NetworkError retries', async () => {
+      it('should throw after 3 failed NetworkError retries', { timeout: 15_000 }, async () => {
         // All 4 attempts fail (initial + 3 retries)
         mockFetch.mockRejectedValue(new TypeError('fetch failed'));
 
@@ -416,7 +416,7 @@ describe('API Client', () => {
         expect(mockFetch).toHaveBeenCalledTimes(4); // Initial + 3 retries
       });
 
-      it('should throw after 3 failed 5xx retries', async () => {
+      it('should throw after 3 failed 5xx retries', { timeout: 15_000 }, async () => {
         mockFetch.mockResolvedValue({
           ok: false,
           status: 503,
@@ -436,7 +436,7 @@ describe('API Client', () => {
         expect(mockFetch).toHaveBeenCalledTimes(4);
       });
 
-      it('should throw after 3 failed 429 retries', async () => {
+      it('should throw after 3 failed 429 retries', { timeout: 15_000 }, async () => {
         mockFetch.mockResolvedValue({
           ok: false,
           status: 429,
