@@ -1052,7 +1052,7 @@ describe('API Client', () => {
         // Advance timers to allow retry check
         await vi.advanceTimersByTimeAsync(1000);
 
-        await expect(resultPromise).rejects.toThrow(AbortError);
+        await expect(resultPromise).rejects.toThrow('Request was cancelled');
         expect(mockFetch).toHaveBeenCalledTimes(1); // Only initial attempt, no retry
       });
 
@@ -1223,7 +1223,7 @@ describe('API Client', () => {
 
       await vi.advanceTimersByTimeAsync(1200);
 
-      await expect(resultPromise).rejects.toThrow(AbortError);
+      await expect(resultPromise).rejects.toThrow('Request was cancelled');
     });
   });
 });

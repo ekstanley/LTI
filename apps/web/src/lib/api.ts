@@ -13,6 +13,7 @@ import type {
   LoginResponse,
   RefreshTokenResponse,
 } from '@ltip/shared';
+import { sleep } from '@ltip/shared';
 
 import { apiConfig } from '@/config/env';
 
@@ -497,7 +498,8 @@ export function isNetworkError(error: unknown): error is NetworkError {
  * Check if error is an abort error
  */
 export function isAbortError(error: unknown): error is AbortError {
-  return error instanceof AbortError;
+  // Check name property (works across module boundaries, iframes, and plain Error instances)
+  return error instanceof Error && error.name === 'AbortError';
 }
 
 /**
@@ -615,42 +617,7 @@ function calculateBackoff(attempt: number): number {
   return Math.floor(exponentialDelay + jitter);
 }
 
-/**
- * Sleep for specified milliseconds with cancellation support
- *
- * @param ms - Milliseconds to sleep
- * @param signal - Optional AbortSignal for cancellation
- * @throws {AbortError} If signal is aborted during sleep
- * @security M-2: Respects AbortSignal to prevent resource waste on cancellation
- */
-function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Check if already aborted before starting
-    if (signal?.aborted) {
-      reject(new AbortError());
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      // Clean up abort listener when timeout completes
-      if (signal && abortHandler) {
-        signal.removeEventListener('abort', abortHandler);
-      }
-      resolve();
-    }, ms);
-
-    // Listen for abort signal during sleep
-    let abortHandler: (() => void) | null = null;
-    if (signal) {
-      abortHandler = () => {
-        clearTimeout(timeoutId);
-        reject(new AbortError());
-      };
-
-      signal.addEventListener('abort', abortHandler, { once: true });
-    }
-  });
-}
+// sleep() imported from @ltip/shared (canonical implementation)
 
 // ============================================================================
 // HTTP Client with CSRF Protection

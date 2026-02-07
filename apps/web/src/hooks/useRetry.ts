@@ -7,6 +7,8 @@
 
 import { useCallback, useRef, useState, useEffect } from 'react';
 
+import { sleep } from '@ltip/shared';
+
 import { apiConfig } from '@/config/env';
 import { isApiError, isNetworkError, isAbortError } from '@/lib/api';
 
@@ -98,43 +100,8 @@ export function calculateBackoff(attempt: number, initialDelay: number = 1000): 
   return Math.floor(exponentialDelay + jitter);
 }
 
-/**
- * Sleep for specified milliseconds with cancellation support
- *
- * @param ms - Milliseconds to sleep
- * @param signal - Optional AbortSignal for cancellation
- * @throws {Error} If signal is aborted during sleep (name='AbortError')
- */
-export function sleep(ms: number, signal?: AbortSignal): Promise<void> {
-  return new Promise((resolve, reject) => {
-    // Check if already aborted
-    if (signal?.aborted) {
-      reject(new Error('Request was cancelled'));
-      return;
-    }
-
-    const timeoutId = setTimeout(() => {
-      // Clean up abort listener when timeout completes
-      if (signal && abortHandler) {
-        signal.removeEventListener('abort', abortHandler);
-      }
-      resolve();
-    }, ms);
-
-    // Listen for abort signal during sleep
-    let abortHandler: (() => void) | null = null;
-    if (signal) {
-      abortHandler = () => {
-        clearTimeout(timeoutId);
-        const error = new Error('Request was cancelled');
-        error.name = 'AbortError';
-        reject(error);
-      };
-
-      signal.addEventListener('abort', abortHandler, { once: true });
-    }
-  });
-}
+// Re-export canonical sleep from shared package
+export { sleep } from '@ltip/shared';
 
 /**
  * Hook to track retry state for async operations
