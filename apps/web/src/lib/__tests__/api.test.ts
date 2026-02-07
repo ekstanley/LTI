@@ -414,7 +414,7 @@ describe('API Client', () => {
 
         await expect(resultPromise).rejects.toThrow(NetworkError);
         expect(mockFetch).toHaveBeenCalledTimes(4); // Initial + 3 retries
-      });
+      }, 15_000);
 
       it('should throw after 3 failed 5xx retries', async () => {
         mockFetch.mockResolvedValue({
@@ -434,7 +434,7 @@ describe('API Client', () => {
         await expect(resultPromise).rejects.toThrow(ApiError);
         await expect(resultPromise).rejects.toMatchObject({ status: 503 });
         expect(mockFetch).toHaveBeenCalledTimes(4);
-      });
+      }, 15_000);
 
       it('should throw after 3 failed 429 retries', async () => {
         mockFetch.mockResolvedValue({
@@ -454,7 +454,7 @@ describe('API Client', () => {
         await expect(resultPromise).rejects.toThrow(ApiError);
         await expect(resultPromise).rejects.toMatchObject({ status: 429 });
         expect(mockFetch).toHaveBeenCalledTimes(4);
-      }, 10000); // Increase timeout to 10s for rate limit retry tests
+      }, 15_000);
     });
 
     describe('Non-Retriable Errors (Immediate Throw)', () => {

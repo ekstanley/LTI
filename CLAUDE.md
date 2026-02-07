@@ -592,10 +592,10 @@ export function useBills(filters: BillFilters) {
 
 **Test Results**:
 ```
-✅ Shared:  79/79 tests passing (+35 new)
-✅ API:    477/477 tests passing
-✅ Web:    368/368 tests passing (+27 new)
-✅ Total:  924/924 tests passing
+✅ Shared:  84/84 tests passing
+✅ API:    1,001/1,001 tests passing
+✅ Web:    606/606 tests passing
+✅ Total:  1,691/1,691 tests passing
 ```
 
 **Documentation**:
@@ -1024,19 +1024,36 @@ router.post('/admin/unlock-account', requireAuth, requireAdmin, handler);
 - [ ] Verify no secrets committed
 - [ ] Update SECURITY.md if new vulnerability addressed
 
-### Known Security Issues
+### Security Issue Status
 
-See `docs/change-control/PHASE-2-CODE-REVIEW-2026-02-02.md` for complete list:
+All 19 issues from the Phase 2 Code Review (2026-02-02) have been resolved:
 
-**HIGH Priority** (6 issues):
-1. IP spoofing vulnerability (CWE-441) - 2 hours
-2. Race condition in lockout check (TOCTOU) - 4-6 hours
-3. AbortController memory leak - 30 mins
-4. External signal listener leak - 1 hour
-5. Code duplication (96 lines) - 4-6 hours
-6. SWR double-retry conflict - 2 hours
+- **7 CRITICAL+HIGH**: Fixed in CR-008, CR-009, CR-010, CR-011
+- **12 MEDIUM+LOW**: Resolved in prior work
+- **Production hardening**: CR-013 (IP validation, audit logging, coverage gate)
 
-**Remediation**: Scheduled for next sprint (20-28 hours total)
+See `docs/change-control/` for complete change control records.
+
+### Audit Logging
+
+Security events are persisted to the `AuditLog` table via fire-and-forget writes:
+
+```typescript
+import { logAuditEvent } from '../services/audit.service.js';
+
+// Fire-and-forget: never throws, falls back to console.error on failure
+void logAuditEvent({
+  action: 'LOGIN_SUCCESS',  // AuditAction enum
+  userId: user.id,          // Optional
+  email: user.email,        // Optional
+  ipAddress: clientIP,      // Optional
+  metadata: { role: 'admin' }, // Optional JSON
+});
+```
+
+**Actions**: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `TOKEN_REFRESH`, `ACCOUNT_LOCKED`, `ACCOUNT_UNLOCKED`, `ADMIN_ACTION`
+
+**Contract**: `logAuditEvent()` never throws. On Prisma failure, logs to `console.error` as fallback.
 
 ---
 
