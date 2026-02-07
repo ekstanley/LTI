@@ -35,6 +35,8 @@ interface QueuedRequest {
   resolve: () => void;
   reject: (error: Error) => void;
   timeout: NodeJS.Timeout;
+  /** Timeout for the scheduled processQueue() call; must be cleared on resolve/reject/reset */
+  processTimeout: NodeJS.Timeout | null;
 }
 
 export class TokenBucketRateLimiter {
@@ -132,15 +134,18 @@ export class TokenBucketRateLimiter {
           (r) => r.resolve === resolve
         );
         if (index >= 0) {
+          const req = this.requestQueue[index]!;
+          if (req.processTimeout) clearTimeout(req.processTimeout);
           this.requestQueue.splice(index, 1);
         }
         reject(new Error(`Rate limiter timeout after ${timeoutMs}ms`));
       }, timeoutMs);
 
-      this.requestQueue.push({ resolve, reject, timeout });
+      const queuedRequest: QueuedRequest = { resolve, reject, timeout, processTimeout: null };
+      this.requestQueue.push(queuedRequest);
 
-      // Schedule the next available slot
-      setTimeout(() => {
+      // Schedule the next available slot (tracked for cleanup)
+      queuedRequest.processTimeout = setTimeout(() => {
         this.processQueue();
       }, waitTime);
     });
@@ -156,6 +161,7 @@ export class TokenBucketRateLimiter {
       const request = this.requestQueue.shift();
       if (request) {
         clearTimeout(request.timeout);
+        if (request.processTimeout) clearTimeout(request.processTimeout);
         this.tokens -= 1;
         this.requestsThisHour++;
         request.resolve();
@@ -188,9 +194,10 @@ export class TokenBucketRateLimiter {
     this.requestsThisHour = 0;
     this.hourStartTime = Date.now();
 
-    // Reject all waiting requests
+    // Reject all waiting requests and clear all tracked timers
     for (const request of this.requestQueue) {
       clearTimeout(request.timeout);
+      if (request.processTimeout) clearTimeout(request.processTimeout);
       request.reject(new Error('Rate limiter reset'));
     }
     this.requestQueue = [];
