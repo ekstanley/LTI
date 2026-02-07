@@ -16,6 +16,7 @@ import type { Request, Response, NextFunction } from 'express';
 
 import { logger } from '../lib/logger.js';
 import { accountLockoutService } from '../services/accountLockout.service.js';
+import { logAuditEvent } from '../services/audit.service.js';
 import { getClientIP } from '../utils/ip.js';
 // LockoutServiceError is checked by err.name in the error handler (middleware/error.ts)
 
@@ -108,6 +109,16 @@ export async function trackLoginAttempt(
       const lockoutInfo = await accountLockoutService.recordFailedAttempt(email, ip);
 
       if (lockoutInfo.isLocked) {
+        // Audit log: persist lockout event (fire-and-forget)
+        void logAuditEvent({
+          action: 'ACCOUNT_LOCKED',
+          email,
+          ipAddress: ip,
+          metadata: {
+            attemptCount: lockoutInfo.attemptCount,
+            lockoutDuration: lockoutInfo.remainingSeconds,
+          },
+        });
         logger.warn(
           {
             email,

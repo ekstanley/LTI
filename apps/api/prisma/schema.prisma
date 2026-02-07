@@ -626,6 +626,7 @@ model User {
   subscriptions Subscription[]
   apiKeys       ApiKey[]
   refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -699,4 +700,36 @@ model Subscription {
 
   @@unique([userId, type, billId, legislatorId, subjectId, committeeId, keyword])
   @@map("subscriptions")
+}
+
+// ============================================================================
+// AUDIT LOGGING
+// ============================================================================
+
+enum AuditAction {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  TOKEN_REFRESH
+  ACCOUNT_LOCKED
+  ACCOUNT_UNLOCKED
+  ADMIN_ACTION
+}
+
+/// Persistent audit log for security-relevant events.
+/// Fire-and-forget writes: failures must never block auth flows.
+model AuditLog {
+  id        Int         @id @default(autoincrement())
+  action    AuditAction
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id])
+  email     String?
+  ipAddress String?
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  @@index([action])
+  @@index([userId])
+  @@index([createdAt])
+  @@index([email])
+  @@map("audit_logs")
 }

@@ -22,6 +22,7 @@ import {
   changePasswordSchema,
   revokeSessionSchema,
 } from '../schemas/auth.schema.js';
+import { logAuditEvent } from '../services/audit.service.js';
 import { authService } from '../services/auth.service.js';
 import { oauthService } from '../services/oauth.service.js';
 import { getClientIP } from '../utils/ip.js';
@@ -153,28 +154,28 @@ authRouter.post('/login', authRateLimiter, accountLockout, validate(loginSchema)
     const ip = metadata.ipAddress ?? 'unknown';
     await trackLoginAttempt(email, ip, result.success);
 
-    // Audit log: login attempt
+    // Audit log: persist login attempt (fire-and-forget)
     if (result.success) {
+      void logAuditEvent({
+        action: 'LOGIN_SUCCESS',
+        userId: result.user.id,
+        email,
+        ipAddress: ip,
+        metadata: { role: result.user.role },
+      });
       logger.info(
-        {
-          event: 'auth.login.success',
-          email,
-          ip,
-          userId: result.user.id,
-          role: result.user.role,
-          timestamp: new Date().toISOString(),
-        },
+        { event: 'auth.login.success', email, ip, userId: result.user.id },
         'AUDIT: Successful login'
       );
     } else {
+      void logAuditEvent({
+        action: 'LOGIN_FAILURE',
+        email,
+        ipAddress: ip,
+        metadata: { reason: result.error },
+      });
       logger.warn(
-        {
-          event: 'auth.login.failure',
-          email,
-          ip,
-          reason: result.error,
-          timestamp: new Date().toISOString(),
-        },
+        { event: 'auth.login.failure', email, ip, reason: result.error },
         'AUDIT: Failed login attempt'
       );
     }
@@ -260,12 +261,13 @@ authRouter.post('/refresh', async (req, res, next) => {
       return;
     }
 
+    // Audit log: persist token refresh (fire-and-forget)
+    void logAuditEvent({
+      action: 'TOKEN_REFRESH',
+      ipAddress: metadata.ipAddress,
+    });
     logger.info(
-      {
-        event: 'auth.token.refresh',
-        ip: getClientMetadata(req).ipAddress,
-        timestamp: new Date().toISOString(),
-      },
+      { event: 'auth.token.refresh', ip: metadata.ipAddress },
       'AUDIT: Token refreshed'
     );
 

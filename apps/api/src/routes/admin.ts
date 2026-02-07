@@ -14,6 +14,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { ApiError } from '../middleware/error.js';
 import { validate } from '../middleware/validate.js';
 import { accountLockoutService } from '../services/accountLockout.service.js';
+import { logAuditEvent } from '../services/audit.service.js';
 
 export const adminRouter: RouterType = Router();
 
@@ -144,7 +145,14 @@ adminRouter.post(
         req.user.email
       );
 
-      // Audit log (already logged in service, but log here too for completeness)
+      // Audit log: persist admin action (fire-and-forget)
+      void logAuditEvent({
+        action: 'ACCOUNT_UNLOCKED',
+        userId: req.user.id,
+        email: req.user.email,
+        ipAddress: req.ip,
+        metadata: { unlockedEmail: email, wasLocked },
+      });
       logger.info(
         {
           adminId: req.user.id,
