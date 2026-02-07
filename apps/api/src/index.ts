@@ -149,8 +149,13 @@ const shutdown = () => {
   }, 10_000);
 };
 
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+// Guard against duplicate handler registration (defensive: HMR, test re-imports)
+if (!process.listenerCount('SIGTERM')) {
+  process.on('SIGTERM', shutdown);
+}
+if (!process.listenerCount('SIGINT')) {
+  process.on('SIGINT', shutdown);
+}
 
 // Start server
 bootstrap().catch((err) => {
