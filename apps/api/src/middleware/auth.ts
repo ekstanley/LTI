@@ -11,6 +11,7 @@ import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
 import { jwtService } from '../services/jwt.service.js';
 import type { AuthenticatedUser } from '../types/express.js';
+import { mapPrismaRole } from '../utils/roles.js';
 
 import { ApiError } from './error.js';
 
@@ -43,11 +44,6 @@ function extractBearerToken(req: Request): string | null {
  * @param userId - User's database ID
  * @returns AuthenticatedUser or null if not found/inactive
  */
-/**
- * Map Prisma UserRole enum (uppercase) to API role string (lowercase)
- */
-const ROLE_MAP = { USER: 'user', ADMIN: 'admin' } as const;
-
 async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -69,7 +65,7 @@ async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser
 
   return {
     ...user,
-    role: ROLE_MAP[user.role] ?? 'user',
+    role: mapPrismaRole(user.role),
   };
 }
 

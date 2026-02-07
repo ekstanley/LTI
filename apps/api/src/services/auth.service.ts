@@ -9,14 +9,9 @@ import { config } from '../config.js';
 import { prisma } from '../db/client.js';
 import { logger } from '../lib/logger.js';
 
+import { mapPrismaRole, type ApiRole } from '../utils/roles.js';
 import { jwtService, type TokenPair } from './jwt.service.js';
 import { passwordService } from './password.service.js';
-
-/**
- * Map Prisma UserRole enum (uppercase) to API role string (lowercase)
- */
-const ROLE_MAP = { USER: 'user', ADMIN: 'admin' } as const;
-type ApiRole = (typeof ROLE_MAP)[keyof typeof ROLE_MAP];
 
 /**
  * Registration input
@@ -160,7 +155,7 @@ export const authService = {
         success: true,
         user: {
           ...user,
-          role: ROLE_MAP[user.role] ?? 'user',
+          role: mapPrismaRole(user.role),
         },
         tokens,
       };
@@ -306,7 +301,7 @@ export const authService = {
           name: user.name,
           avatarUrl: user.avatarUrl,
           emailVerified: user.emailVerified,
-          role: ROLE_MAP[user.role] ?? 'user',
+          role: mapPrismaRole(user.role),
         },
         tokens,
       };
@@ -420,7 +415,7 @@ export const authService = {
 
     return {
       ...user,
-      role: ROLE_MAP[user.role] ?? 'user',
+      role: mapPrismaRole(user.role),
     };
   },
 
@@ -454,7 +449,7 @@ export const authService = {
 
     return {
       ...user,
-      role: ROLE_MAP[user.role] ?? 'user',
+      role: mapPrismaRole(user.role),
     };
   },
 
