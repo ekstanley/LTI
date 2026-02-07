@@ -58,8 +58,8 @@ function createTestApp(middleware: express.RequestHandler) {
   return app;
 }
 
-// Mock data
-const mockUser: AuthenticatedUser = {
+// Prisma-level mock data (uppercase role — what the DB returns)
+const mockPrismaUser = {
   id: 'user-123',
   email: 'test@example.com',
   name: 'Test User',
@@ -67,6 +67,12 @@ const mockUser: AuthenticatedUser = {
   emailVerified: true,
   isActive: true,
   rateLimit: 100,
+  role: 'USER' as const,
+};
+
+// Expected API-level output (lowercase role — after mapPrismaRole)
+const mockUser: AuthenticatedUser = {
+  ...mockPrismaUser,
   role: 'user',
 };
 
@@ -75,8 +81,13 @@ const mockUnverifiedUser: AuthenticatedUser = {
   emailVerified: false,
 };
 
+const mockUnverifiedPrismaUser = {
+  ...mockPrismaUser,
+  emailVerified: false,
+};
+
 const mockInactiveUser = {
-  ...mockUser,
+  ...mockPrismaUser,
   isActive: false,
 };
 
@@ -98,7 +109,7 @@ describe('Auth Middleware', () => {
       });
 
       // Mock user lookup
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockPrismaUser as any);
 
       const app = createTestApp(requireAuth);
 
@@ -311,13 +322,36 @@ describe('Auth Middleware', () => {
       );
     });
 
+    it('maps Prisma ADMIN role to lowercase admin in req.user', async () => {
+      vi.mocked(jwtService.verifyAccessToken).mockReturnValue({
+        valid: true,
+        payload: { sub: 'admin-123', email: 'admin@example.com', type: 'access' },
+      });
+
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        ...mockPrismaUser,
+        id: 'admin-123',
+        email: 'admin@example.com',
+        role: 'ADMIN' as const,
+      } as any);
+
+      const app = createTestApp(requireAuth);
+
+      const response = await request(app)
+        .get('/test')
+        .set('Authorization', 'Bearer valid-token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.role).toBe('admin');
+    });
+
     it('attaches full user object to req.user', async () => {
       vi.mocked(jwtService.verifyAccessToken).mockReturnValue({
         valid: true,
         payload: { sub: 'user-123', email: 'test@example.com', type: 'access' },
       });
 
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockPrismaUser as any);
 
       const app = createTestApp(requireAuth);
 
@@ -345,7 +379,7 @@ describe('Auth Middleware', () => {
         payload: { sub: 'user-123', email: 'test@example.com', type: 'access' },
       });
 
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockPrismaUser as any);
 
       const app = createTestApp(optionalAuth);
 
@@ -529,7 +563,7 @@ describe('Auth Middleware', () => {
         payload: { sub: 'user-123', email: 'test@example.com', type: 'access' },
       });
 
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockPrismaUser as any);
 
       const app = express();
       app.use(express.json());
@@ -552,7 +586,7 @@ describe('Auth Middleware', () => {
         payload: { sub: 'user-123', email: 'test@example.com', type: 'access' },
       });
 
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUnverifiedUser as any);
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(mockUnverifiedPrismaUser as any);
 
       const app = express();
       app.use(express.json());

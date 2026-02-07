@@ -573,6 +573,25 @@ describe('authService', () => {
       });
       expect(logger.error).toHaveBeenCalledWith({ error: expect.any(Error) }, 'Login failed');
     });
+
+    it('should map ADMIN role to lowercase admin in login response', async () => {
+      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+        ...mockUser,
+        role: 'ADMIN' as const,
+      } as any);
+      vi.mocked(passwordService.verify).mockResolvedValue({
+        valid: true,
+        needsRehash: false,
+      });
+      vi.mocked(jwtService.generateTokenPair).mockResolvedValue(mockTokenPair);
+
+      const result = await authService.login(validInput);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.user.role).toBe('admin');
+      }
+    });
   });
 
   describe('refresh', () => {
@@ -796,7 +815,7 @@ describe('authService', () => {
     });
 
     it('should pass correct data to prisma.user.update', async () => {
-      vi.mocked(prisma.user.update).mockResolvedValue({} as any);
+      vi.mocked(prisma.user.update).mockResolvedValue({ role: 'USER' } as any);
 
       await authService.updateProfile(userId, updateData);
 

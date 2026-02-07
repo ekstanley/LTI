@@ -960,42 +960,49 @@ backoff = min(1000ms * 2^attempt, 30000ms) + jitter(±10%)
 // Results: 1s → 2s → 4s → 8s (max 3 retries)
 ```
 
-### Admin Middleware Pattern
+### Admin Authorization (Database-Driven RBAC)
 
-**Current Implementation** (Temporary):
+**Implementation**: CR-008 (Phase 2 Completion Sprint)
+
+Admin authorization uses a database-driven `UserRole` enum (`USER` | `ADMIN`) in the Prisma schema. The role is selected at login/token-refresh and mapped from uppercase DB values to lowercase API strings via `mapPrismaRole()` in `apps/api/src/utils/roles.ts`.
 
 ```typescript
-// apps/api/src/routes/admin.ts
-function requireAdmin(req: any, _res: any, next: any): void {
-  if (!req.user) {
-    throw ApiError.unauthorized('Authentication required');
+// apps/api/src/utils/roles.ts — single source of truth
+import type { UserRole as PrismaUserRole } from '@prisma/client';
+
+export function mapPrismaRole(prismaRole: PrismaUserRole): ApiRole {
+  switch (prismaRole) {
+    case 'USER':  return 'user';
+    case 'ADMIN': return 'admin';
+    default: { const _exhaustive: never = prismaRole; throw new Error(...); }
   }
+}
+```
 
-  // Use ADMIN_EMAILS environment variable
-  const adminEmailsStr = process.env.ADMIN_EMAILS || '';
-  const adminEmails = adminEmailsStr
-    .split(',')
-    .map(email => email.trim().toLowerCase())
-    .filter(Boolean);
+```typescript
+// apps/api/src/routes/admin.ts — requireAdmin middleware
+function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
+  if (!req.user) throw ApiError.unauthorized('Authentication required');
 
-  const isAdmin = adminEmails.includes(req.user.email.toLowerCase());
+  // Primary: database-driven role check
+  if (req.user.role === 'admin') { next(); return; }
 
-  if (!isAdmin) {
-    logger.warn(
-      { userId: req.user.id, email: req.user.email, path: req.path },
-      'SECURITY: Non-admin user attempted to access admin endpoint'
-    );
-    throw ApiError.forbidden('Admin access required');
-  }
+  // Deprecated fallback: ADMIN_EMAILS env var (remove after migration)
+  const adminEmails = (process.env.ADMIN_EMAILS || '').split(',')...;
+  if (adminEmails.includes(req.user.email.toLowerCase())) { next(); return; }
 
-  next();
+  throw ApiError.forbidden('Admin access required');
 }
 
-// Usage
+// Usage — rate-limited at 30 req/15min
 router.post('/admin/unlock-account', requireAuth, requireAdmin, handler);
 ```
 
-**⚠️ Note**: This is a temporary solution. Proper RBAC with database-driven roles is planned (Issue #TBD).
+**Key points**:
+- Role stored as `UserRole` enum in Prisma (`USER` default, `ADMIN` for admins)
+- `ADMIN_EMAILS` env var is a deprecated fallback; database role is authoritative
+- Admin endpoints rate-limited at 30 requests per 15 minutes
+- Structured audit logging on login, token refresh, and admin actions
 
 ### Security Best Practices Checklist
 
