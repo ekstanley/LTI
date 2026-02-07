@@ -43,6 +43,11 @@ function extractBearerToken(req: Request): string | null {
  * @param userId - User's database ID
  * @returns AuthenticatedUser or null if not found/inactive
  */
+/**
+ * Map Prisma UserRole enum (uppercase) to API role string (lowercase)
+ */
+const ROLE_MAP = { USER: 'user', ADMIN: 'admin' } as const;
+
 async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -54,6 +59,7 @@ async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser
       emailVerified: true,
       isActive: true,
       rateLimit: true,
+      role: true,
     },
   });
 
@@ -61,7 +67,10 @@ async function fetchAuthenticatedUser(userId: string): Promise<AuthenticatedUser
     return null;
   }
 
-  return user;
+  return {
+    ...user,
+    role: ROLE_MAP[user.role] ?? 'user',
+  };
 }
 
 /**

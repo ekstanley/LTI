@@ -17,6 +17,7 @@ export interface AuthenticatedUser {
   emailVerified: boolean;
   isActive: boolean;
   rateLimit: number;
+  role: 'admin' | 'user';
 }
 
 /**

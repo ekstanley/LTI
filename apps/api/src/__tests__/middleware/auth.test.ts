@@ -67,6 +67,7 @@ const mockUser: AuthenticatedUser = {
   emailVerified: true,
   isActive: true,
   rateLimit: 100,
+  role: 'user',
 };
 
 const mockUnverifiedUser: AuthenticatedUser = {
@@ -118,6 +119,7 @@ describe('Auth Middleware', () => {
           emailVerified: true,
           isActive: true,
           rateLimit: true,
+          role: true,
         },
       });
     });

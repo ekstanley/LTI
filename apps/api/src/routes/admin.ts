@@ -6,6 +6,7 @@
  */
 
 import { Router, type Router as RouterType, type Request, type Response, type NextFunction } from 'express';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 
 import { logger } from '../lib/logger.js';
@@ -17,6 +18,41 @@ import { accountLockoutService } from '../services/accountLockout.service.js';
 export const adminRouter: RouterType = Router();
 
 // ============================================================================
+// Admin Rate Limiting
+// ============================================================================
+
+/**
+ * Rate limiter for admin endpoints
+ *
+ * Limits admin API access to 30 requests per 15 minutes per IP.
+ * Protects against admin endpoint abuse.
+ */
+const adminRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // 30 requests per window per IP
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    code: 'TOO_MANY_ADMIN_REQUESTS',
+    message: 'Too many admin requests. Please try again later.',
+  },
+  handler: (req, res, _next, options) => {
+    logger.warn(
+      {
+        ip: req.ip,
+        path: req.path,
+        userId: req.user?.id,
+      },
+      'SECURITY: Admin rate limit exceeded'
+    );
+    res.status(options.statusCode).json(options.message);
+  },
+});
+
+// Apply rate limiter to all admin routes
+adminRouter.use(adminRateLimiter);
+
+// ============================================================================
 // Admin Authentication Middleware
 // ============================================================================
 
@@ -25,34 +61,48 @@ export const adminRouter: RouterType = Router();
  *
  * Must be used after requireAuth middleware.
  *
- * TEMPORARY IMPLEMENTATION: Uses ADMIN_EMAILS environment variable.
- * TODO: Replace with proper role-based access control from database (see Issue #TBD)
+ * Primary: Checks req.user.role === 'admin' (database-driven RBAC).
+ * Fallback: Checks ADMIN_EMAILS env var for backward compatibility during
+ * migration. The ADMIN_EMAILS mechanism is DEPRECATED and will be removed
+ * in a future release.
  */
 function requireAdmin(req: Request, _res: Response, next: NextFunction): void {
   if (!req.user) {
     throw ApiError.unauthorized('Authentication required');
   }
 
-  // Get admin emails from environment (comma-separated list)
-  const adminEmailsStr = process.env.ADMIN_EMAILS || '';
+  // Primary: Database-driven role check
+  if (req.user.role === 'admin') {
+    next();
+    return;
+  }
+
+  // Fallback (DEPRECATED): ADMIN_EMAILS env var check during migration
+  const adminEmailsStr = process.env.ADMIN_EMAILS ?? '';
   const adminEmails = adminEmailsStr.split(',').map(email => email.trim().toLowerCase()).filter(Boolean);
+  const isLegacyAdmin = adminEmails.length > 0 && adminEmails.includes(req.user.email.toLowerCase());
 
-  // Check if user email is in admin list
-  const isAdmin = adminEmails.includes(req.user.email.toLowerCase());
-
-  if (!isAdmin) {
-    logger.warn(
+  if (isLegacyAdmin) {
+    logger.info(
       {
         userId: req.user.id,
         email: req.user.email,
-        path: req.path,
       },
-      'SECURITY: Non-admin user attempted to access admin endpoint'
+      'DEPRECATION: Admin access granted via ADMIN_EMAILS env var. Migrate to database role.'
     );
-    throw ApiError.forbidden('Admin access required');
+    next();
+    return;
   }
 
-  next();
+  logger.warn(
+    {
+      userId: req.user.id,
+      email: req.user.email,
+      path: req.path,
+    },
+    'SECURITY: Non-admin user attempted to access admin endpoint'
+  );
+  throw ApiError.forbidden('Admin access required');
 }
 
 // ============================================================================

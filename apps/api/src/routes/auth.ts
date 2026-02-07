@@ -8,6 +8,7 @@
 import { Router, type Router as RouterType, type Request } from 'express';
 
 import { config } from '../config.js';
+import { logger } from '../lib/logger.js';
 import { accountLockout, trackLoginAttempt } from '../middleware/accountLockout.js';
 import { requireAuth } from '../middleware/auth.js';
 import { authRateLimiter } from '../middleware/authRateLimiter.js';
@@ -151,6 +152,32 @@ authRouter.post('/login', authRateLimiter, accountLockout, validate(loginSchema)
     const ip = metadata.ipAddress ?? 'unknown';
     await trackLoginAttempt(email, ip, result.success);
 
+    // Audit log: login attempt
+    if (result.success) {
+      logger.info(
+        {
+          event: 'auth.login.success',
+          email,
+          ip,
+          userId: result.user.id,
+          role: result.user.role,
+          timestamp: new Date().toISOString(),
+        },
+        'AUDIT: Successful login'
+      );
+    } else {
+      logger.warn(
+        {
+          event: 'auth.login.failure',
+          email,
+          ip,
+          reason: result.error,
+          timestamp: new Date().toISOString(),
+        },
+        'AUDIT: Failed login attempt'
+      );
+    }
+
     if (!result.success) {
       const errorMessages: Record<string, { status: number; message: string }> = {
         invalid_credentials: { status: 401, message: 'Invalid email or password' },
@@ -231,6 +258,15 @@ authRouter.post('/refresh', async (req, res, next) => {
       });
       return;
     }
+
+    logger.info(
+      {
+        event: 'auth.token.refresh',
+        ip: getClientMetadata(req).ipAddress,
+        timestamp: new Date().toISOString(),
+      },
+      'AUDIT: Token refreshed'
+    );
 
     // Set new refresh token in cookie
     res.cookie(REFRESH_TOKEN_COOKIE, result.tokens.refreshToken, COOKIE_OPTIONS);

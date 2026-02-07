@@ -16,6 +16,11 @@ datasource db {
 // ENUMS
 // ============================================================================
 
+enum UserRole {
+  USER
+  ADMIN
+}
+
 enum Party {
   D // Democrat
   R // Republican
@@ -605,7 +610,8 @@ model User {
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?
 
-  // Account status
+  // Account status and authorization
+  role        UserRole  @default(USER)
   isActive    Boolean   @default(true)
   lastLoginAt DateTime?
 

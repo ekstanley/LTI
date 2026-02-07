@@ -171,6 +171,7 @@ describe('Auth Routes Integration Tests', () => {
         id: 'user-123',
         email: 'newuser@example.com',
         name: 'New User',
+        role: 'user' as const,
       };
       const mockTokens = {
         accessToken: 'access-token-xyz',
@@ -204,7 +205,7 @@ describe('Auth Routes Integration Tests', () => {
     it('sets refreshToken httpOnly cookie on success', async () => {
       vi.mocked(authService.register).mockResolvedValue({
         success: true,
-        user: { id: 'user-123', email: 'test@example.com', name: 'Test' },
+        user: { id: 'user-123', email: 'test@example.com', name: 'Test', role: 'user' as const },
         tokens: {
           accessToken: 'access',
           refreshToken: 'refresh-token-secure',
@@ -344,6 +345,7 @@ describe('Auth Routes Integration Tests', () => {
         id: 'user-123',
         email: 'user@example.com',
         name: 'Test User',
+        role: 'user' as const,
       };
       const mockTokens = {
         accessToken: 'access-token-xyz',
@@ -376,7 +378,7 @@ describe('Auth Routes Integration Tests', () => {
     it('sets refreshToken httpOnly cookie on success', async () => {
       vi.mocked(authService.login).mockResolvedValue({
         success: true,
-        user: { id: 'user-123', email: 'test@example.com', name: 'Test' },
+        user: { id: 'user-123', email: 'test@example.com', name: 'Test', role: 'user' as const },
         tokens: {
           accessToken: 'access',
           refreshToken: 'refresh-token-secure',
@@ -401,7 +403,7 @@ describe('Auth Routes Integration Tests', () => {
     it('calls trackLoginAttempt with success=true', async () => {
       vi.mocked(authService.login).mockResolvedValue({
         success: true,
-        user: { id: 'user-123', email: 'test@example.com', name: 'Test' },
+        user: { id: 'user-123', email: 'test@example.com', name: 'Test', role: 'user' as const },
         tokens: {
           accessToken: 'access',
           refreshToken: 'refresh',
@@ -1092,7 +1094,7 @@ describe('Auth Routes Integration Tests', () => {
     it('returns 200 with user+accessToken on success and sets cookie', async () => {
       const mockResult = {
         success: true as const,
-        user: { id: 'user-123', email: 'oauth@example.com', name: 'OAuth User', avatarUrl: null, emailVerified: true },
+        user: { id: 'user-123', email: 'oauth@example.com', name: 'OAuth User', avatarUrl: null, emailVerified: true, role: 'user' as const },
         tokens: {
           accessToken: 'oauth-access-token',
           refreshToken: 'oauth-refresh-token',
@@ -1214,7 +1216,7 @@ describe('Auth Routes Integration Tests', () => {
     it('returns 200 with user+accessToken on success and sets cookie', async () => {
       const mockResult = {
         success: true as const,
-        user: { id: 'user-456', email: 'github@example.com', name: 'GitHub User', avatarUrl: null, emailVerified: true },
+        user: { id: 'user-456', email: 'github@example.com', name: 'GitHub User', avatarUrl: null, emailVerified: true, role: 'user' as const },
         tokens: {
           accessToken: 'github-access-token',
           refreshToken: 'github-refresh-token',
