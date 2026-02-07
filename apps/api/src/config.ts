@@ -55,6 +55,10 @@ const envSchema = z.object({
   CONGRESS_API_BASE_URL: z.string().default('https://api.congress.gov/v3'),
   CONGRESS_API_RATE_LIMIT: z.coerce.number().default(1000), // requests per hour
   CONGRESS_SYNC_INTERVAL_MS: z.coerce.number().default(15 * 60 * 1000), // 15 minutes
+
+  // Memory cache configuration (fallback when Redis unavailable)
+  MEMORY_CACHE_MAX_ENTRIES: z.coerce.number().min(100).default(10_000),
+
   // GovInfo API configuration (bill text in XML/PDF/HTML)
   GOVINFO_API_KEY: z.string().optional(),
   GOVINFO_API_BASE_URL: z.string().default('https://api.govinfo.gov'),
@@ -148,6 +152,10 @@ export const config = {
     memoryCost: 65536, // 64 MB
     timeCost: 3, // 3 iterations
     parallelism: 4, // 4 parallel threads
+  },
+
+  cache: {
+    maxEntries: env.MEMORY_CACHE_MAX_ENTRIES,
   },
 
   congress: {
