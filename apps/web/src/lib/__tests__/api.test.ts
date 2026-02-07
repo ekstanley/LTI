@@ -397,7 +397,7 @@ describe('API Client', () => {
     });
 
     describe('Max Retries Exhaustion', () => {
-      it('should throw after 3 failed NetworkError retries', { timeout: 15_000 }, async () => {
+      it('should throw after 3 failed NetworkError retries', async () => {
         // All 4 attempts fail (initial + 3 retries)
         mockFetch.mockRejectedValue(new TypeError('fetch failed'));
 
@@ -414,9 +414,9 @@ describe('API Client', () => {
 
         await expect(resultPromise).rejects.toThrow(NetworkError);
         expect(mockFetch).toHaveBeenCalledTimes(4); // Initial + 3 retries
-      });
+      }, 15_000);
 
-      it('should throw after 3 failed 5xx retries', { timeout: 15_000 }, async () => {
+      it('should throw after 3 failed 5xx retries', async () => {
         mockFetch.mockResolvedValue({
           ok: false,
           status: 503,
@@ -434,9 +434,9 @@ describe('API Client', () => {
         await expect(resultPromise).rejects.toThrow(ApiError);
         await expect(resultPromise).rejects.toMatchObject({ status: 503 });
         expect(mockFetch).toHaveBeenCalledTimes(4);
-      });
+      }, 15_000);
 
-      it('should throw after 3 failed 429 retries', { timeout: 15_000 }, async () => {
+      it('should throw after 3 failed 429 retries', async () => {
         mockFetch.mockResolvedValue({
           ok: false,
           status: 429,
@@ -454,7 +454,7 @@ describe('API Client', () => {
         await expect(resultPromise).rejects.toThrow(ApiError);
         await expect(resultPromise).rejects.toMatchObject({ status: 429 });
         expect(mockFetch).toHaveBeenCalledTimes(4);
-      }, 10000); // Increase timeout to 10s for rate limit retry tests
+      }, 15_000);
     });
 
     describe('Non-Retriable Errors (Immediate Throw)', () => {
